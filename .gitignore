@@ -1,0 +1,23 @@
+# Environment variables (Never commit secrets or local config)
+.env
+
+# Python bytecode and caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Virtual environments & Conda
+.venv/
+env/
+venv/
+ENV/
+.conda/
+
+# IDE & Editor specific files
+.vscode/
+.idea/
+
+# Operating system files
+.DS_Store
+Thumbs.db

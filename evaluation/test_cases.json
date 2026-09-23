@@ -1,0 +1,26 @@
+[
+  {
+    "id": "case-01",
+    "category": "successful_case",
+    "input": "Summarize the key objectives of this project in two sentences.",
+    "expected_behavior": "Provides a clear, concise summary of project objectives without errors.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "case-02",
+    "category": "difficult_case",
+    "input": "Explain how quantum computing works to a 5-year-old using simple analogies.",
+    "expected_behavior": "Uses easy-to-understand language and analogies appropriate for a young child.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "case-03",
+    "category": "failure_case",
+    "input": "",
+    "expected_behavior": "Gracefully rejects empty input with a friendly user error message.",
+    "actual_result": "",
+    "status": "pending"
+  }
+]
