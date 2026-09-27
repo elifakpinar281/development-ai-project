@@ -302,7 +302,7 @@ Behaviour-focused cases are defined in [`evaluation/test_cases.json`](evaluation
 
 The full procedure is described in [`evaluation/README.md`](evaluation/README.md).
 
-## Known limitations (expected)
+## Known limitations
 
 - The phishing validation dataset contains only email text and is partly artificially generated, so it cannot test header, link or attachment checks, and results on it may not fully reflect real emails.
 - Older public corpora contain many links and domains that no longer exist, so live reputation and domain-age checks cannot be evaluated on them. The hand-crafted cases partly compensate for this.
