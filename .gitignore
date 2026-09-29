@@ -23,4 +23,4 @@ ENV/
 Thumbs.db
 
 # Datasets that are too large or should not be published
-data/raw/*.csv
+data/raw
