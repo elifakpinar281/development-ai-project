@@ -272,7 +272,7 @@ The evaluation uses three data sources, because each one covers a different part
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The raw corpora add real senders and links but no authentication headers or attachments, and many of their domains no longer exist. The hand-crafted cases cover the remaining checks. 
 Reputation and domain-age results change over time, so tool responses for the evaluation set are cached and stored with the results.
 
-The raw dataset contain real names and email addresses, so they are kept locally in `data/raw/` and excluded from the repository via `.gitignore`. 
+The raw datasets contain real names and email addresses, so they are kept locally in `data/raw/` and excluded from the repository via `.gitignore`. 
 Dataset sources and licenses will be documented in [`data/README.md`](data/README.md). 
 No real personal emails are committed to the repository.
 
