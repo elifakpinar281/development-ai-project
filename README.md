@@ -266,11 +266,15 @@ The evaluation uses three data sources, because each one covers a different part
 | Source | Content | Used to evaluate |
 |---|---|---|
 | [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 labelled emails, text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases *(planned)* | About 20 modern attack examples written by the team, using fictional `.example` domains | Modern attack types, difficult and adversarial cases |
+| Nazario phishing corpus and SpamAssassin public corpus (raw emails) | Real phishing emails (Nazario) and legitimate emails (SpamAssassin) with sender, receiver, subject, body and extracted URLs | Sender and link checks on real emails, false positive rate on real legitimate mail |
+| Hand-crafted `.eml` cases (planned) | About 20 modern attack examples written by the team, using fictional `.example` domains, with full headers and attachment metadata | Authentication and attachment checks, modern attack types, difficult and adversarial cases |
 
-The text-only dataset cannot test header, link-target or attachment checks, which is why the raw emails and hand-crafted cases are needed for the tool and agent evaluation. Reputation and domain-age results change over time, so tool responses for the evaluation set are cached and stored with the results.
+The validation dataset contains only email text, so it cannot test header, link or attachment checks. The raw corpora add real senders and links but no authentication headers or attachments, and many of their domains no longer exist. The hand-crafted cases cover the remaining checks. 
+Reputation and domain-age results change over time, so tool responses for the evaluation set are cached and stored with the results.
 
-Dataset sources and licenses are documented in [`data/README.md`](data/README.md). No real personal emails are committed to the repository.
+The raw datasets contain real names and email addresses, so they are kept locally in `data/raw/` and excluded from the repository via `.gitignore`. 
+Dataset sources and licenses will be documented in [`data/README.md`](data/README.md). 
+No real personal emails are committed to the repository.
 
 ### Compared configurations
 
@@ -294,13 +298,13 @@ A false negative (phishing classified as safe) is the most harmful error, so **r
 
 ### Test cases
 
-Behaviour-focused cases are defined in [`evaluation/test_cases.json`](evaluation/test_cases.json) in three categories:
+Behaviour-focused test cases will be added to [`evaluation/test_cases.json`](evaluation/test_cases.json) during development. They are planned in three categories:
 
 - **Successful cases:** typical phishing types (credential link, CEO fraud, malicious attachment) and a normal legitimate email.
 - **Difficult cases:** alarming but legitimate emails (real password resets), phishing from compromised legitimate accounts, emails without headers, non-English emails.
 - **Failure and adversarial cases:** prompt injection inside the email, empty input, non-email text, Ollama not running, missing API key, invalid tool calls proposed by the model.
 
-The full procedure is described in [`evaluation/README.md`](evaluation/README.md).
+Each case will record the expected behaviour, the actual result and a status (pass, partial or fail).
 
 ## Known limitations
 
