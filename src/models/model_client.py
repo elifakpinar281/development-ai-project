@@ -90,7 +90,7 @@ class OllamaModelClient(ModelClient):
             except ollama.ResponseError as error:
                 if error.status_code != 400 or "think" not in str(error.error).lower():
                     raise
-                logger.info("Model %s has no thinking mode; sending requests without it.", self.model_name)
+                logger.info("Model %s has no thinking mode. Sending requests without it.", self.model_name)
                 self._send_think_setting = False
 
         return self._client.chat(

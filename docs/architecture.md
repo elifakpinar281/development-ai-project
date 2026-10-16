@@ -75,18 +75,36 @@ SpotThePhish extends the course starter template with three integrated AI capabi
 ## 3. Component Details
 
 ### `src/services/ai_service.py` (Application Service)
-Central entry point and controller.
-- Coordinates parsing, launches the investigation agent, validates schemas, and records output.
-- **Controlled Failure Handling:** In the event Ollama is down, unresponsive, or fails schema generation, the service switches to `run_offline_fallback_pipeline()`. This runs all local offline checks deterministically and returns a rule-based verdict labeled `[Offline Fallback Mode]`.
+Single entry point for the UI `AnalysisService.analyze(text) -> AnalysisResult`. It never raises.
+- Rejects empty, oversized or non-email input before any model call (status `rejected`).
+- Runs the main analyzer (the agent). If the agent raises any `ModelError` (Ollama down, model missing, timeout, invalid output, ungrounded verdict), it runs the `OfflineAnalyzer` instead (status `fallback`) and adds a user-facing warning.
+- Saves the verdict fingerprint through `memory.save_verdict`. A database failure only adds a warning.
+- Any unexpected bug becomes status `failed` with a friendly message. The traceback is logged.
+
+### `src/services/service_factory.py` (Composition root)
+The only place that creates the real objects (Ollama client, tool registry, agent, fallback, parser, case recorder) and wires them together through constructors. 
+Tests build the same classes with fakes.
 
 ### `src/capabilities/agent.py` (Investigation Agent)
-- Manages the ReAct-style observation/action loop.
-- Formats system prompts and enforces a maximum budget of **6 tool calls** to prevent infinite loops, token exhaustion, or excessive latency.
-- Ensures all evidence claims in the final verdict link back to actual observations recorded in the trace.
+- ReAct-style loop. The model returns one JSON decision per step (`call_tool` or `finish`, with a one-sentence reason). The application checks and runs the tool and returns the result as a numbered observation.
+- The prompt-injection scan always runs first (observation #1).
+- Budget of 6 steps. Refused and repeated calls also use a step, so the loop always ends. Repeated calls are not executed again.
+- Invalid JSON or an ungrounded verdict gets one correction attempt. A second failure raises `InvalidModelOutputError` / `VerdictValidationError`.
+- Every step is recorded in the trace (`tool_call`, `rejected_call`, `repeated_call`, `invalid_output`, `step_limit`, `final_answer`).
+
+### `src/capabilities/prompts.py` (Prompts)
+System prompt, email formatting and the final-answer instructions. 
+The email and every tool result are placed in data blocks with a random boundary per run.
+Block markers inside the email are broken up, so an email cannot close its own block.
+
+### `src/models/model_client.py` (Model Client)
+`ModelClient` interface plus `OllamaModelClient`, the only code that talks to Ollama. 
+Uses structured output (a JSON schema per request), temperature 0 and thinking off. 
+Translates Ollama and network errors into `ModelUnavailableError`, `ModelNotFoundError` and `ModelTimeoutError`.
 
 ### `src/capabilities/tools.py` (Tool Registry)
 Provides read-only inspection functions:
-- `check_email_authentication`: Inspects SPF, DKIM, and DMARC headers; verifies alignment between `From`, `Reply-To`, and `Return-Path`.
+- `check_email_authentication`: Inspects SPF, DKIM, and DMARC headers. Verifies alignment between `From`, `Reply-To`, and `Return-Path`.
 - `analyze_links`: Compares displayed anchor text against target href, detects IP-based URLs, URL shorteners, and Punycode/homoglyph spoofing.
 - `check_lookalike_domain`: Calculates Levenshtein edit distance between sender/link domains and well-known university/financial brand domains.
 - `check_domain_age`: Fetches domain creation dates via RDAP protocol to identify newly registered domains.
@@ -97,13 +115,21 @@ Provides read-only inspection functions:
 ### `src/capabilities/memory.py` (Case History Store)
 - Persistent, local-only SQLite storage (`data/case_history.db`).
 - Stores minimal matching fingerprints: sender domain, target link domains, subject hash, verdict, risk score, and timestamp.
-- Full email contents and bodies are **never** stored, ensuring user privacy.
+- Full email contents and bodies are never stored, ensuring user privacy.
 
-### `src/schemas/responses.py` (Data Models & Safety Guardrails)
-- Defines Pydantic schemas for `ParsedEmail`, `ToolRequest`, `ToolObservation`, `EvidenceItem`, and `PhishingAnalysisResult`.
-- **Deterministic Override Rules:**
-  - If a verified reputation check flags a link as malicious: Force verdict to **Phishing** and Risk Score $\ge 90$.
-  - If SPF/DKIM fail with direct domain impersonation: Minimum Risk Score $\ge 75$ and verdict at least **Suspicious**.
+### `src/capabilities/tool_registry.py` (Tool gatekeeper)
+Every proposed call is checked before it runs: the tool must exist, arguments must match the tool's schema, and `domain` / `url` arguments must appear in the email. 
+Refused calls raise `InvalidToolCallError`, which the agent reports back to the model. 
+`lookup_case_history` arguments are always filled in by the application from the email.
+
+### `src/capabilities/verdict_validator.py` and `verdict_policy.py` (Verdict validation)
+- Every evidence item must cite an observation that actually ran, or quote text that appears word for word in the email.
+- The score is moved into the band of the verdict (safe 0-39, suspicious 40-69, phishing 70-100).
+- Safety rules can only raise a verdict: a link listed by the reputation service forces phishing (risk >= 90), a known phishing campaign, a prompt injection or any warning with risk >= 80 forces at least suspicious. The rules use all tool results, not only the cited ones.
+
+### `src/capabilities/offline_analyzer.py` (Offline fallback)
+Runs every check that needs no model and no network, scores them with a fixed rule and applies the same safety rules. 
+Results are marked `is_fallback` and are not saved to the case history.
 
 ---
 
@@ -111,8 +137,13 @@ Provides read-only inspection functions:
 
 | Failure Scenario | Component Handling | User-Facing Result |
 | :--- | :--- | :--- |
-| **Ollama server offline / connection refused** | `src/models/model_client.py` catches `ConnectError`; alerts `ai_service.py`. | Seamless fallback to deterministic offline heuristic pipeline; output clearly labeled as fallback. |
-| **Model produces invalid JSON or invalid tool call** | `src/capabilities/agent.py` catches parsing error and feeds validation error back into the agent loop as an observation. | The model is prompted to correct its format; counts toward the 6-step budget. |
-| **Step budget reached (6 calls without conclusion)** | `src/capabilities/agent.py` halts the loop and triggers forced synthesis. | Service summarizes observations gathered so far into a provisional assessment. |
-| **External API down or missing API key** | `src/capabilities/tools.py` returns status `"unavailable"` with details. | Agent continues with remaining local tools; UI shows which checks could not be run. |
-| **Empty or non-email text input** | `src/email_parser.py` raises validation error before model invocation. | Gradio displays friendly validation message without consuming model tokens. |
+| **Ollama not running / model not pulled / timeout** | `OllamaModelClient` raises `ModelUnavailableError` / `ModelNotFoundError` / `ModelTimeoutError`; `AnalysisService` catches `ModelError`. | Offline fallback result, clearly labelled, with a warning that says what to fix. |
+| **Model returns invalid JSON** | Agent sends the exact problems back once; a second failure raises `InvalidModelOutputError`. | Usually corrected silently (visible in the trace), otherwise offline fallback. |
+| **Model asks for an unknown tool, wrong arguments or a domain not in the email** | `ToolRegistry` raises `InvalidToolCallError`, the agent reports it to the model as an observation. Counts as a step. | Visible in the trace as `rejected_call`. |
+| **Verdict cites a check that did not run, or quotes text not in the email** | `VerdictValidator` returns the problems - one correction attempt, then `VerdictValidationError`. | Usually corrected, otherwise offline fallback. |
+| **Step budget used up** | Agent stops calling tools and asks for the final verdict with the evidence so far. | Trace shows `step_limit`. |
+| **External API down, rate limit or missing API key** | `tool_boundary` returns a `ToolResult` with status `unavailable`. | Agent continues, the UI lists the checks that could not run. |
+| **Domain tool server (MCP) cannot start** | Factory leaves those tools out and records a startup warning. | Warning on every result. Agent works with the remaining tools. |
+| **Case history database down** | `AnalysisService` catches `DatabaseUnavailableError` when saving. | Result is shown. Warning that it was not saved. |
+| **Empty, oversized or non-email input** | `AnalysisService` / parser (`InvalidEmailInputError`). | Friendly message. No model call. |
+| **Unexpected bug** | `AnalysisService.analyze()` catches it and logs the traceback. | Status `failed` with a friendly message. |

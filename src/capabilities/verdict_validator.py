@@ -83,7 +83,7 @@ class VerdictValidator:
             for rule in outcome.applied:
                 reasons.append(rule.reason)
             explanation += (
-                f" SpotThePhish raised this verdict to \"{outcome.verdict}\" because " + "; and ".join(reasons) + "."
+                f" SpotThePhish raised this verdict to \"{outcome.verdict}\" because " + "- and ".join(reasons) + "."
             )
             action = DEFAULT_ACTIONS[outcome.verdict]
 

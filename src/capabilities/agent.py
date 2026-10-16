@@ -35,7 +35,7 @@ class _Run:
         self.messages: list[ChatMessage] = []
         self.observations: list[Observation] = []
         self.trace: list[AgentStep] = []
-        self.signatures: dict[str, int] = {}  # call signature -> observation id
+        self.signatures: dict[str, int] = {}
         self.steps_used = 0
         self.model_calls = 0
 
@@ -112,7 +112,7 @@ class AgentAnalyzer(Analyzer):
         if step_limit_reached:
             run.add_step(
                 kind="step_limit",
-                summary=f"Used all {self.max_steps} tool calls; asking the model to decide.",
+                summary=f"Used all {self.max_steps} tool calls. Asking the model to decide.",
             )
 
         verdict = self._final_verdict(run, step_limit_reached)
@@ -151,7 +151,7 @@ class AgentAnalyzer(Analyzer):
                 decision = AgentDecision.model_validate_json(prompts.extract_json(raw))
             except ValidationError as error:
                 problems = _validation_problems(error)
-                run.add_step(kind="invalid_output", summary="Invalid decision: " + "; ".join(problems))
+                run.add_step(kind="invalid_output", summary="Invalid decision: " + "- ".join(problems))
                 if attempt == self.max_repairs:
                     raise InvalidModelOutputError(
                         "The model did not return a valid decision.", raw_output=raw
@@ -192,7 +192,7 @@ class AgentAnalyzer(Analyzer):
                 tool_name=call.tool_name,
                 arguments=call.arguments,
                 observation_id=earlier_id,
-                summary=f"Same check as observation #{earlier_id}; not run again.",
+                summary=f"Same check as observation #{earlier_id} - not run again.",
             )
             run.messages.append(prompts.user_message(prompts.repeated_call_message(earlier_id, steps_left)))
             return

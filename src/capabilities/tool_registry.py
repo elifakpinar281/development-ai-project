@@ -196,7 +196,7 @@ class ToolRegistry:
             if name in self._argument_fillers:
                 spec = ToolSpec(
                     name=spec.name,
-                    description=spec.description + " (Arguments are filled in automatically; pass {}.)",
+                    description=spec.description + " (Arguments are filled in automatically - pass {}.)",
                 )
             specs.append(spec)
         return specs

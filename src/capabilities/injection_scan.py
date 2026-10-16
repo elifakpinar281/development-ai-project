@@ -83,7 +83,7 @@ def scan_for_prompt_injection(email: ParsedEmail) -> ToolResult:
         status="warning",
         finding=(
             "The email contains text aimed at AI tools or email scanners. "
-            "Legitimate senders have no reason to do this; it is a common trick to evade detection."
+            "Legitimate senders have no reason to do this. It is a common trick to evade detection."
         ),
         risk_score=_RISK_SCORE,
         evidence=evidence,

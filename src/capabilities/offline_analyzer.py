@@ -109,7 +109,7 @@ class OfflineAnalyzer(Analyzer):
             f"({len(ran)} ran). "
         )
         if warnings:
-            explanation += f"{len(warnings)} of them raised a warning; see the evidence list. "
+            explanation += f"{len(warnings)} of them raised a warning. See the evidence list. "
         else:
             explanation += "None of them raised a warning. "
         explanation += (
