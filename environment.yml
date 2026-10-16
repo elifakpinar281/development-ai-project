@@ -2,6 +2,7 @@ name: dev-ai-project
 
 channels:
   - conda-forge
+  - defaults
 
 dependencies:
   - python=3.12
@@ -12,3 +13,7 @@ dependencies:
       - pydantic
       - python-dotenv
       - pytest
+      - "mcp>=1.2,<2" #<2 because FastMCP is called different and else server dies
+      - httpx
+      - "psycopg[binary]>=3.1"
+      - tldextract

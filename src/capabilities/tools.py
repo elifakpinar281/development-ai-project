@@ -1,26 +1,36 @@
-"""
-Optional project capability: Tools & External API Integration.
+from __future__ import annotations
 
-Implement this module only if this capability is relevant to your application's
-user problem. Remove the file if the capability is not used.
+from typing import Any
 
-Conceptual Overview:
--------------------
-Tools allow the AI application to perform operations beyond text generation,
-such as fetching live data from external APIs, performing calculations, or
-executing internal application functions.
+from src.capabilities.mcp_client import DomainToolsClient
+from src.schemas.responses import ToolResult
 
-Key concepts when implementing tools:
-1. Tool Definition: Defining function schemas (names, descriptions, parameters)
-   that describe what each tool does.
-2. Model Tool Calling: Providing tool schemas to the model so it can request tool execution
-   when needed.
-3. Execution & Response: Parsing tool call requests, executing the corresponding
-   Python function or API call, and passing the results back to the model or user.
 
-Note:
------
-Tools should be deterministic, safe, and scoped to the user problem.
-"""
+class MCPToolRegistry:
 
-# Implement custom tool functions and schema definitions below if selected.
+    def __init__(
+        self,
+        client: DomainToolsClient | None = None,
+    ) -> None:
+        self.client = client or DomainToolsClient()
+        self._owns_client = client is None
+
+    def get_available_tools(self) -> list[dict[str, Any]]:
+        return self.client.tool_definitions()
+
+    def execute_tool(
+        self,
+        tool_name: str,
+        arguments: dict[str, Any],
+    ) -> ToolResult:
+        return self.client.call(tool_name, arguments)
+
+    def close(self) -> None:
+        if self._owns_client:
+            self.client.close()
+
+    def __enter__(self) -> "MCPToolRegistry":
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback) -> None:
+        self.close()

@@ -125,7 +125,7 @@ Application / AI Service (src/services/ai_service.py)
   |    - check_url_reputation (external reputation service)
   |    - inspect_attachments (attachment metadata, suspicious extensions)
   |    - lookup_case_history (earlier verdicts for the same domains / campaign)
-  | → Case History Store (src/capabilities/memory.py): SQLite, local only
+  | → Case History Store (src/capabilities/memory.py): Postgres, local only
   | → Verdict Validator (src/schemas/responses.py): Pydantic validation, evidence grounding, safety rules
   ↓
 Model Client (src/models/model_client.py)
@@ -154,7 +154,7 @@ Ollama (Local LLM Server) -> qwen3:8b
 
 - [ ] RAG (Retrieval-Augmented Generation)
 - [x] Tools / External API integration
-- [ ] Model Context Protocol (MCP)
+- [x] Model Context Protocol (MCP)
 - [x] Agentic workflow (Model-selected actions based on observations)
 - [x] Memory / Persistent state
 - [ ] Multimodal interaction (Text + Images)
@@ -177,9 +177,12 @@ A fixed workflow would run every check on every email. This is slower, sends mor
 
 This claim will be tested: the evaluation compares the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
 
+#### Model Context Protocol (MCP)
+The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The agent discovers them via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
+
 #### Memory / persistent state
-Phishing arrives in campaigns, where the same email reaches many people in an organisation.
-SpotThePhish stores a compact record of every validated verdict locally in SQLite.
+Phishing arrives in campaigns. SpotThePhish stores a fingerprint of every validated verdict in PostgreSQL (sender domain, link domains, a hash of the normalised subject, verdict, risk score, date) and never the email body. The agent can query it with `lookup_case_history`. A match is evidence, not an automatic answer. See [Decision 5](docs/project-decisions.md).
+SpotThePhish stores a compact record of every validated verdict locally in Postgres.
 The agent can query it with the `lookup_case_history` tool: if the same sender domain, link domain or subject pattern was already judged phishing, the agent can finish with fewer checks and the result tells the user that this is a known campaign.
 
 The history only stores what is needed for matching (domains, subject fingerprint, verdict, timestamp), not full email bodies.
@@ -235,7 +238,23 @@ ollama pull qwen3:8b
 
 On computers with less memory, use `qwen3:4b` and set `MODEL_NAME=qwen3:4b` in `.env`.
 
-### 5. Run the application
+### 5. Start PostgreSQL
+
+The case history and the evaluation cache use PostgreSQL. Start it with Docker:
+
+```bash
+docker compose up -d
+```
+
+Optional: put a Google Safe Browsing key into `.env` (`SAFE_BROWSING_API_KEY`) to enable the URL reputation check. Without a key the check reports "unavailable" and the analysis continues. Never commit `.env`.
+
+Domain-tool tests that need the database use a separate test database:
+
+```bash
+pytest
+```
+
+### 6. Run the application
 
 Run the application from the root directory of the project:
 
@@ -245,7 +264,7 @@ python -m app.main
 
 Then open your browser at `http://localhost:7860`.
 
-### 6. Run automated tests
+### 7. Run automated tests
 
 ```bash
 pytest
@@ -313,6 +332,13 @@ Each case will record the expected behaviour, the actual result and a status (pa
 - Emails pasted without headers cannot be checked for authentication results, which weakens the assessment.
 - Phishing sent from compromised legitimate accounts passes authentication and domain checks, so detection then depends mainly on the language analysis.
 - A local 8B model may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback pipeline limit the impact, but they do not eliminate errors.
+- The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate company that has the same name as a listed brand. Risk values and thresholds are initial, hand-chosen settings.
+- Domain age relies on RDAP. Not every top-level domain publishes RDAP data, so a missing record is only a weak signal, and public RDAP servers can rate-limit requests.
+- The URL reputation check needs a Google Safe Browsing API key, which is free only for non-commercial use, and it sends the checked URL to Google. A URL that is not listed is not proven safe, and very new phishing pages may not be listed yet.
+- Online checks that cannot run (timeout, rate limit, missing key) are reported as "unavailable". They reduce the evidence, but the application does not retry automatically.
+- The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Verdicts from the offline fallback are not stored.
+- Evaluation results for online tools are recorded in a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions and say nothing about the accuracy of the live services.
+- The full application needs a running PostgreSQL instance (Docker) for the case history. Without it, only that capability is unavailable.
 
 ## Future improvements
 

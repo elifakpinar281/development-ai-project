@@ -1,0 +1,16 @@
+From: HAMK IT Support <it-support@hamk-student-login.example>
+To: student@hamk-test.example
+Subject: Your HAMK password expires today
+Date: Mon, 12 Oct 2026 10:02:11 +0000
+Message-ID: <p3-02@hamk-student-login.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Hello,
+
+Your HAMK password expires today. To keep access to Moodle and your
+student email, sign in here and set a new password:
+
+http://hamk-student-login.example/reset
+
+HAMK IT Support
