@@ -70,3 +70,65 @@ class McpServerUnavailableError(ToolUnavailableError):
 
 class EvalCacheMissError(ToolUnavailableError):
     default_reason = "No cached result exists for this input in replay mode."
+
+class InvalidEmailInputError(SpotThePhishError):
+    default_reason = "The input could not be read as an email."
+    user_message = "Please paste the full email (ideally with headers) or upload an .eml file."
+
+    def __init__(self, reason: str | None = None, user_message: str | None = None):
+        super().__init__(reason)
+        if user_message:
+            self.user_message = user_message
+
+
+class InvalidToolCallError(SpotThePhishError):
+    default_reason = "The tool call was rejected."
+
+
+class ModelError(SpotThePhishError):
+    default_reason = "The AI model could not produce a usable answer."
+    user_message = (
+        "The AI analysis could not be completed, so SpotThePhish used its offline checks instead."
+        "This result is less thorough."
+    )
+
+
+class ModelUnavailableError(ModelError):
+    default_reason = "The Ollama server is not reachable."
+    user_message = (
+        "The AI model is not available, so SpotThePhish "
+        "used its offline checks instead. This result is less thorough."
+    )
+
+
+class ModelNotFoundError(ModelUnavailableError):
+    default_reason = "The configured model is not installed in Ollama."
+    user_message = (
+        "The configured AI model is not installed in Ollama (run 'ollama pull <model>'),"
+        "so SpotThePhish used its offline checks instead."
+    )
+
+
+
+class ModelTimeoutError(ModelUnavailableError):
+    default_reason = "The model did not answer in time."
+    user_message = (
+        "The AI model took too long to answer, so SpotThePhish used its "
+        "offline checks instead. This result is less thorough."
+    )
+
+
+class InvalidModelOutputError(ModelError):
+    default_reason = "The model returned invalid output."
+
+    def __init__(self, reason: str | None = None, raw_output: str = ""):
+        super().__init__(reason)
+        self.raw_output = raw_output
+
+
+class VerdictValidationError(ModelError):
+    default_reason = "The model's verdict was not supported by the evidence."
+
+    def __init__(self, problems: list[str]):
+        super().__init__("; ".join(problems) or self.default_reason)
+        self.problems = problems
