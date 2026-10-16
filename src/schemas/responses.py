@@ -108,8 +108,10 @@ class Verdict(BaseModel):
     risk_score: float = Field(ge = 0.0, le = 100.0)
     confidence: float = Field(default = 0.85, ge = 0.0, le = 1.0)
     explanation: str
+    recommended_action: str = ""
     evidence: List[str] = Field(default_factory = list)
     tools_run: List[str] = Field(default_factory = list)
+    safety_rules_applied: List[str] = Field(default_factory = list)
     is_fallback: bool = False
     unavailable_tools: List[str] = Field(default_factory = list)
     timestamp: str = Field(default_factory = lambda: datetime.now(timezone.utc).isoformat())
