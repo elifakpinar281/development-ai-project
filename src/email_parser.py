@@ -19,7 +19,7 @@ import email.utils
 import ipaddress
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Tuple, Union
+from typing import List, Optional, Set, Tuple, Union
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
 from src.schemas.responses import (AttachmentMetadata, AuthenticationResults, EmailAddress, LinkInfo, ParsedEmail)
@@ -416,8 +416,8 @@ def parse_email(content: Union[str, bytes, Path]) -> ParsedEmail:
                 if payload:
                     charset = part.get_content_charset() or "utf-8"
                     plain_chunks.append(payload.decode(charset, errors="replace"))
-                elif ct == "text/html" and "attachment" not in cd:
-                    payload = part.get_payload(decode=True)
+            elif ct == "text/html" and "attachment" not in cd:
+                payload = part.get_payload(decode=True)
                 if payload:
                     charset = part.get_content_charset() or "utf-8"
                     html_chunks.append(payload.decode(charset, errors="replace"))
