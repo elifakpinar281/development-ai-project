@@ -99,8 +99,8 @@ class ModelError(SpotThePhishError):
 class ModelUnavailableError(ModelError):
     default_reason = "The Ollama server is not reachable."
     user_message = (
-        "The AI model is not available, so SpotThePhish used its offline checks instead. This result is less thorough."
-        "Check if Ollama is running."
+        "The AI model is not available (is Ollama running?), so SpotThePhish "
+        "used its offline checks instead. This result is less thorough."
     )
 
 

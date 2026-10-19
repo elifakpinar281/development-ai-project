@@ -11,7 +11,7 @@ from src.exceptions import (
 )
 from src.schemas.agent import AnalysisStatus, AnalyzerOutput
 from src.schemas.responses import Verdict
-from src.services.ai_service import AnalysisService, format_result_as_markdown, generate_response
+from src.services.ai_service import AnalysisService, format_result_as_text, generate_response
 from tests.fakes import make_email, result
 
 
@@ -152,9 +152,9 @@ def test_real_offline_fallback_works_end_to_end():
     assert outcome.verdict.is_fallback is True
 
 
-def test_markdown_formatting_for_the_starter_ui():
+def test_text_formatting_for_the_starter_ui():
     service, _, _ = make_service()
     text = generate_response("Subject: hi\n\nbody", service)
-    assert text.startswith("## PHISHING (risk 90/100)")
-    rejected = format_result_as_markdown(service.analyze(""))
+    assert text.startswith("PHISHING (risk 90/100)")
+    rejected = format_result_as_text(service.analyze(""))
     assert "Paste an email" in rejected
