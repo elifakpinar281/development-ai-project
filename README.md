@@ -182,7 +182,6 @@ The four domain and memory tools depend on external systems (RDAP, a reputation 
 
 #### Memory / persistent state
 Phishing arrives in campaigns. SpotThePhish stores a fingerprint of every validated verdict in PostgreSQL (sender domain, link domains, a hash of the normalised subject, verdict, risk score, date) and never the email body. The agent can query it with `lookup_case_history`. A match is evidence, not an automatic answer. See [Decision 5](docs/project-decisions.md).
-SpotThePhish stores a compact record of every validated verdict locally in Postgres.
 The agent can query it with the `lookup_case_history` tool: if the same sender domain, link domain or subject pattern was already judged phishing, the agent can finish with fewer checks and the result tells the user that this is a known campaign.
 
 The history only stores what is needed for matching (domains, subject fingerprint, verdict, timestamp), not full email bodies.
@@ -240,6 +239,7 @@ On computers with less memory, use `qwen3:4b` and set `MODEL_NAME=qwen3:4b` in `
 
 ### 5. Start PostgreSQL
 
+Start the application from the project root folder. The domain tool server is started as `python -m src.mcp_servers.domain_server`, which needs the project root as working directory.
 The case history and the evaluation cache use PostgreSQL. Start it with Docker:
 
 ```bash
@@ -339,6 +339,8 @@ Each case will record the expected behaviour, the actual result and a status (pa
 - The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Verdicts from the offline fallback are not stored.
 - Evaluation results for online tools are recorded in a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions and say nothing about the accuracy of the live services.
 - The full application needs a running PostgreSQL instance (Docker) for the case history. Without it, only that capability is unavailable.
+- The offline fallback runs only checks that need no network. It cannot look up the age of a domain, so a very new, unknown sender domain without other warning signs can be rated "likely safe" in fallback mode.
+- The lookalike check can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk").
 
 ## Future improvements
 

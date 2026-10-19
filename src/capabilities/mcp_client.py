@@ -9,6 +9,7 @@ import queue
 import sys
 import threading
 from typing import Any
+from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -19,6 +20,7 @@ from src.exceptions import (InvalidToolInputError, McpServerUnavailableError, Se
 from src.schemas.responses import ToolResult
 
 log = logging.getLogger(__name__)
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 class DomainToolsClient:
     def __init__(
@@ -67,17 +69,15 @@ class DomainToolsClient:
             self._ready.set()
 
     async def _serve(self) -> None:
-        command = os.getenv("MCP_SERVER_COMMAND", sys.executable)
-        args_text = os.getenv(
-            "MCP_SERVER_ARGS",
-            "-m src.mcp_servers.domain_server",
-        )
+        command = os.getenv("MCP_SERVER_COMMAND") or sys.executable
+        args_text = os.getenv("MCP_SERVER_ARGS") or "-m src.mcp_servers.domain_server"
         args = args_text.split()
 
         params = StdioServerParameters(
             command=command,
             args=args,
             env=dict(os.environ),
+            cwd=str(PROJECT_ROOT),
         )
 
         async with stdio_client(params) as (read_stream, write_stream):

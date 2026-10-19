@@ -1,0 +1,2 @@
+CREATE DATABASE spotthephish_eval;
+CREATE DATABASE spotthephish_test;

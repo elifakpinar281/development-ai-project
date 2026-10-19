@@ -24,6 +24,8 @@ _DOMAIN_RE = re.compile(
 _URL_RE = re.compile(r"^https?://[^\s]+$", re.IGNORECASE)
 
 WARN_THRESHOLD = 40
+MIN_BRAND_LABEL_EMBEDDED = 4
+MIN_BRAND_LABEL_FUZZY = 5
 
 
 def normalize_domain(value: str) -> str:
@@ -58,9 +60,6 @@ def normalize_domain(value: str) -> str:
     except UnicodeError as exc:
         raise InvalidDomainError() from exc
 
-    if value in {"localhost", "localhost.localdomain"}:
-        return value
-
     labels = value.split(".")
     if len(labels) >= 2 and labels[-1] in _RESERVED_TLDS:
         if not all(
@@ -71,7 +70,7 @@ def normalize_domain(value: str) -> str:
             for label in labels
         ):
             raise InvalidDomainError()
-        return value
+        return ".".join(labels[-2:])
 
     if not _DOMAIN_RE.fullmatch(value):
         raise InvalidDomainError()
@@ -134,11 +133,20 @@ def _levenshtein(left: str, right: str) -> int:
     return previous[-1]
 
 
-_CONFUSABLES = str.maketrans({ #similar looking cyrillic
+def _to_unicode(domain: str) -> str:
+    try:
+        return domain.encode("ascii").decode("idna")
+    except UnicodeError:
+        return domain
+
+
+_CONFUSABLES = str.maketrans({ #similar looking digits and cyrillic letters
     "0": "o",
     "1": "l",
     "3": "e",
+    "4": "a",
     "5": "s",
+    "7": "t",
     "а": "a",
     "е": "e",
     "і": "i",
@@ -179,8 +187,11 @@ def check_lookalike_domain(domain: str) -> ToolResult:
             is_offline=True,
         )
 
-    extracted = _TLD(domain)
-    registrable_label = extracted.domain or labels[0]
+    if labels[-1] in _RESERVED_TLDS:  #fictional test domains
+        registrable_label = labels[-2]
+    else:
+        registrable_label = _TLD(domain).domain or labels[0]
+    registrable_label = _to_unicode(registrable_label)
     normalized_label = registrable_label.translate(_CONFUSABLES)
 
     best_brand = None
@@ -189,45 +200,35 @@ def check_lookalike_domain(domain: str) -> ToolResult:
     match_type = "no_close_match"
 
     for brand, brand_label in _brand_labels():
-        if domain == brand:
-            return ToolResult(
-                tool_name="check_lookalike_domain",
-                status="success",
-                finding="The domain exactly matches a configured known domain.",
-                risk_score=0,
-                evidence=[f"Exact known-domain match: {domain}"],
-                details={"domain": domain, "match_type": "exact"},
-                is_offline=True,
-            )
-
         candidate_risk = 0
         candidate_type = "no_close_match"
 
-        if normalized_label != registrable_label:
-            if normalized_label == brand_label:
-                candidate_risk = 90
-                candidate_type = "confusable_character"
-        elif registrable_label == brand_label and domain != brand:
+        if normalized_label != registrable_label and normalized_label == brand_label:
+            candidate_risk = 90
+            candidate_type = "confusable_character"
+        elif registrable_label == brand_label:
             candidate_risk = 60
             candidate_type = "different_domain_suffix"
-        elif brand_label in registrable_label:
-            candidate_risk = 70
-            candidate_type = "brand_embedded"
         else:
-            distance = _levenshtein(registrable_label, brand_label)
-            if distance == 1:
-                candidate_risk = 85
-                candidate_type = "edit_distance_1"
-            elif distance == 2:
-                candidate_risk = 65
-                candidate_type = "edit_distance_2"
+            for label in {registrable_label, normalized_label}:
+                if (len(brand_label) >= MIN_BRAND_LABEL_EMBEDDED
+                        and brand_label in label and 70 > candidate_risk):
+                    candidate_risk = 70
+                    candidate_type = "brand_embedded"
+                if (len(brand_label) >= MIN_BRAND_LABEL_FUZZY
+                        and len(label) >= MIN_BRAND_LABEL_FUZZY):
+                    distance = _levenshtein(label, brand_label)
+                    if distance == 1 and 85 > candidate_risk:
+                        candidate_risk = 85
+                        candidate_type = "edit_distance_1"
+                    elif distance == 2 and 65 > candidate_risk:
+                        candidate_risk = 65
+                        candidate_type = "edit_distance_2"
 
         if candidate_risk > risk_score:
             risk_score = candidate_risk
             best_brand = brand
-            best_distance = _levenshtein(
-                registrable_label, brand_label
-            )
+            best_distance = _levenshtein(registrable_label, brand_label)
             match_type = candidate_type
 
     if best_brand:
@@ -269,10 +270,10 @@ def _lookup_domain_age(domain: str) -> ToolResult:
             follow_redirects=True,
             headers={"Accept": "application/rdap+json"},
         )
-    except httpx.TimeoutException as exc:
+    except (httpx.TimeoutException, httpx.TransportError) as exc:
         raise ServiceTimeoutError() from exc
     except httpx.HTTPError as exc:
-        raise ServiceTimeoutError() from exc
+        raise ServiceResponseError() from exc
 
     if response.status_code == 429:
         raise RateLimitError()
@@ -477,7 +478,10 @@ def lookup_case_history(
 
     normalized_sender = ""
     if sender_domain.strip():
-        normalized_sender = require_domain(sender_domain)
+        try:
+            normalized_sender = require_domain(sender_domain)
+        except InvalidDomainError:
+            normalized_sender = "" #sender unreadable
 
     normalized_links: list[str] = []
     for value in link_domains or []:
@@ -486,7 +490,10 @@ def lookup_case_history(
                 "Every link domain must be a string."
             )
         if value.strip():
-            normalized_links.append(require_domain(value))
+            try:
+                normalized_links.append(require_domain(value))
+            except InvalidDomainError:
+                continue
 
     normalized_links = sorted({
         domain

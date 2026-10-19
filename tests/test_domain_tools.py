@@ -16,20 +16,24 @@ from src.exceptions import (
 def no_cache(monkeypatch):
     monkeypatch.setattr(config, "eval_cache_mode", "off")
 
+
 @pytest.mark.parametrize("domain,brand", [
     ("paypa1.com", "paypal.com"),
     ("rnicrosoft.com", "microsoft.com"),
     ("paypal-secure-login.com", "paypal.com"),
     ("paypal.net", "paypal.com"),
     ("hamk.com", "hamk.fi"),
-    ("xn--pypal-4ve.com", "paypal.com"),  # Cyrillic 'а' in paypal
+    ("xn--pypal-4ve.com", "paypal.com"),
 ])
 def test_lookalike_detected(domain, brand):
     r = t.check_lookalike_domain(domain)
-    assert r.status == "warning" and r.details["imitates"] == brand and r.is_offline
+    assert r.status == "warning" and r.details["matched_brand"] == brand and r.is_offline
 
 
-@pytest.mark.parametrize("domain", ["paypal.com", "https://login.hamk.fi/x", "example-shop.org", "ebay.com"])
+@pytest.mark.parametrize("domain", [
+    "paypal.com", "https://login.hamk.fi/x", "example-shop.org", "ebay.com",
+    "shop.fi", "stop.com", "ab.com", "tool.org", "b2b-shop.com",
+])
 def test_lookalike_clean(domain):
     assert t.check_lookalike_domain(domain).status == "success"
 
@@ -39,11 +43,20 @@ def test_lookalike_invalid_input(bad):
     assert t.check_lookalike_domain(bad).status == "error"
 
 
+@pytest.mark.parametrize("domain,brand", [
+    ("paypa1.example", "paypal.com"),
+    ("hamk-student-login.example", "hamk.fi"),
+    ("paypa1-secure.com", "paypal.com"),
+])
+def test_lookalike_evaluation_and_combined_cases(domain, brand):
+    r = t.check_lookalike_domain(domain)
+    assert r.status == "warning" and r.details["matched_brand"] == brand
+
+
 def test_reserved_test_tld_accepted():
     assert t.normalize_domain("secure-login-hamk.example") == "secure-login-hamk.example"
 
 
-# ---- domain age
 def _resp(status, json=None):
     return httpx.Response(status, json=json, request=httpx.Request("GET", "https://rdap.org/x"))
 
@@ -81,7 +94,6 @@ def test_domain_age_invalid_domain_makes_no_request(monkeypatch):
     assert t.check_domain_age("../etc/passwd").status == "error"
 
 
-# ---- reputation
 def test_reputation_without_key(monkeypatch):
     monkeypatch.setattr(config, "safe_browsing_api_key", "")
     assert t.check_url_reputation("http://x.example/a").status == "unavailable"
@@ -109,14 +121,12 @@ def test_reputation_rejects_non_http():
     assert t.check_url_reputation("javascript:alert(1)").status == "error"
 
 
-# ---- case history without database
 def test_history_db_down(monkeypatch):
     monkeypatch.setattr(config, "database_url", "postgresql://x:x@127.0.0.1:1/x")
     r = t.lookup_case_history("evil.com", ["evil.com"], "Urgent")
     assert r.status == "unavailable"
 
 
-# ---- the internal helpers raise specific custom exceptions
 def test_lookup_raises_specific_exceptions(monkeypatch):
     def timeout(*a, **k):
         raise httpx.TimeoutException("t")
@@ -149,3 +159,16 @@ def test_unexpected_bug_is_contained(monkeypatch):
     monkeypatch.setattr(t, "_lookup_domain_age", lambda d: 1 / 0)
     r = t.check_domain_age("example.com")
     assert r.status == "unavailable" and "ZeroDivisionError" in r.finding
+
+def test_domain_age_404_is_only_a_weak_signal(monkeypatch):
+    monkeypatch.setattr(httpx, "get", lambda *a, **k: _resp(404))
+    r = t.check_domain_age("no-record.example")
+    assert r.status == "success" and r.risk_score == 25
+
+
+def test_http_errors_are_not_reported_as_timeouts(monkeypatch):
+    def too_many(*a, **k):
+        raise httpx.TooManyRedirects("x", request=httpx.Request("GET", "https://rdap.org/x"))
+    monkeypatch.setattr(httpx, "get", too_many)
+    r = t.check_domain_age("loop.example")
+    assert r.status == "unavailable" and "timed out" not in r.finding
