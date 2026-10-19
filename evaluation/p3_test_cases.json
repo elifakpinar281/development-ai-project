@@ -1,0 +1,41 @@
+[
+  {
+    "id": "p3-01", "owner": "person3", "category": "successful_case",
+    "input": "evaluation/cases/p3-01-lookalike-paypal.eml",
+    "expected_behavior": "check_lookalike_domain flags paypa1.example as imitating paypal.com. Reputation (seeded) lists the link as malicious, so the verdict is phishing with risk >= 90 (hard rule).",
+    "actual_result": "", "status": "pending"
+  },
+  {
+    "id": "p3-02", "owner": "person3", "category": "successful_case",
+    "input": "evaluation/cases/p3-02-lookalike-hamk.eml",
+    "expected_behavior": "check_lookalike_domain flags hamk-student-login.example (brand name embedded). Domain age (seeded: 5 days) supports it. Verdict phishing or suspicious, evidence cites both tools.",
+    "actual_result": "", "status": "pending"
+  },
+  {
+    "id": "p3-03", "owner": "person3", "category": "successful_case",
+    "input": "evaluation/cases/p3-03-new-domain-invoice.eml",
+    "expected_behavior": "No brand lookalike, but check_domain_age (seeded: 2 days) flags a very new domain. Verdict at least suspicious; explanation mentions the domain age.",
+    "actual_result": "", "status": "pending"
+  },
+  {
+    "id": "p3-04", "owner": "person3", "category": "successful_case",
+    "input": "evaluation/cases/p3-04-campaign-first.eml",
+    "expected_behavior": "First report of the campaign: normal investigation, verdict phishing/suspicious. The validated verdict is stored in the case history (fingerprints only, no body).",
+    "actual_result": "", "status": "pending",
+    "setup": "python -m evaluation.seed_cache --reset-history, then run this case first"
+  },
+  {
+    "id": "p3-05", "owner": "person3", "category": "difficult_case",
+    "input": "evaluation/cases/p3-05-campaign-repeat.eml",
+    "expected_behavior": "Different sender and link domain, same subject pattern as p3-04. lookup_case_history reports a match (subject pattern) as evidence; the explanation says it is a known campaign; fewer tool calls than p3-04. The earlier verdict is evidence, not an automatic answer.",
+    "actual_result": "", "status": "pending",
+    "setup": "run directly after p3-04 with the same case history"
+  },
+  {
+    "id": "p3-06", "owner": "person3", "category": "failure_case",
+    "input": "evaluation/cases/p3-03-new-domain-invoice.eml",
+    "expected_behavior": "Online checks unavailable (EVAL_CACHE_MODE=replay with an empty cache, no API key, or Postgres stopped). Tools return status 'unavailable', the agent continues, a verdict is still produced and the UI lists the unavailable checks. No raw exception is shown.",
+    "actual_result": "", "status": "pending",
+    "setup": "run with an empty eval cache or stop the database container"
+  }
+]

@@ -61,7 +61,7 @@ def decode_mime_header(header_value : Optional[str]) -> str:
 
 def parse_address_field(raw_field: Optional[str]) -> EmailAddress:
     """Splits an address like PayPal Support <support@paypal.com>
-    into display_name='PayPal Support', address='support@paypal.com', and domain='paypal.com'.""" 
+    into display_name='PayPal Support', address='support@paypal.com', and domain='paypal.com'."""
 
     if not raw_field:
         return EmailAddress()
@@ -200,7 +200,7 @@ def extract_links_text(plain_text: str, seen_urls: Set[str]) -> List[LinkInfo]:
             continue
         seen_urls.add(url)
         parsed = urlparse(url)
-        domain = (parsed.hostname or "").lower() 
+        domain = (parsed.hostname or "").lower()
 
         is_ip = is_ip_host(domain)
         is_short = domain in  SHORTENER_DOMAINS
@@ -269,7 +269,7 @@ def inspect_attachment(part: email.message.Message) -> Optional[AttachmentMetada
         risk_reasons.append(f"High-risk executable/script attachment: '{filename}'")
     if is_macro:
         risk_flag = True
-        risk_reasons.append(f"Macro-enabled document format: '{filename}'") 
+        risk_reasons.append(f"Macro-enabled document format: '{filename}'")
 
     return AttachmentMetadata(filename=clean_name,
         content_type=content_type,
@@ -334,20 +334,31 @@ def parse_auth_headers(msg: email.message.Message) -> AuthenticationResults:
     auth_results.raw_headers = raw_headers
     return auth_results
 
+def _is_eml_path(content: Union[str, bytes, Path]) -> bool:
+    if isinstance(content, Path):
+        return True
+    if isinstance(content, str) and "\n" not in content and len(content) <= 260 \
+            and content.lower().endswith(".eml"):
+        try:
+            return Path(content).is_file()
+        except OSError:
+            return False
+    return False
+
 #Main parser function
 def parse_email(content: Union[str, bytes, Path]) -> ParsedEmail:
     """Accepts:
     - Path object or string file path pointing to an .eml file
     - Raw RFC 822 string or bytes
     - Raw pasted email body text (without headers)
-    
+
     Returns:
     - ParsedEmail object with all extracted components."""
 
     raw_str = ""
 
 #load content if given a file path
-    if isinstance(content, Path) or (isinstance(content, str)) and "\n" not in content and Path(content).exists():
+    if _is_eml_path(content):
         p =Path(content)
         try:
             raw_str = p.read_text(encoding= "utf-8", errors="replace")

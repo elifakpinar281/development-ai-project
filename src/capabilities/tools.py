@@ -178,7 +178,7 @@ def analyze_links(email_input: Union[ParsedEmail, Dict[str, Any]]) -> ToolResult
          msg = f"Punycode homograph domain detected: '{link.domain}'"
          if msg not in evidence:
             evidence.append(msg)
-      
+
       if link.is_shortener:
          shortener_count += 1
          link_risk = max(link_risk, 50.0)
