@@ -3,6 +3,7 @@ from __future__ import annotations
 import html
 import re
 
+from src.capabilities.email_fields import real_subject
 from src.capabilities.verdict_policy import (
     DEFAULT_ACTIONS,
     apply_safety_rules,
@@ -16,7 +17,6 @@ USABLE_STATUSES = {"success", "warning"}
 
 
 class VerdictValidator:
-
     def find_problems(
         self,
         answer: ModelVerdict,
@@ -83,7 +83,7 @@ class VerdictValidator:
             for rule in outcome.applied:
                 reasons.append(rule.reason)
             explanation += (
-                f" SpotThePhish raised this verdict to \"{outcome.verdict}\" because " + "- and ".join(reasons) + "."
+                f" SpotThePhish raised this verdict to \"{outcome.verdict}\" because " + " and ".join(reasons) + "."
             )
             action = DEFAULT_ACTIONS[outcome.verdict]
 
@@ -112,7 +112,6 @@ class VerdictValidator:
         )
 
 
-# helpers
 def tools_that_ran(results: list[ToolResult]) -> list[str]:
     names: list[str] = []
     for result in results:
@@ -151,7 +150,7 @@ def _normalize(text: str) -> str:
 
 
 def _searchable_email_text(email: ParsedEmail) -> str:
-    parts = [email.subject, email.body_plain]
+    parts = [real_subject(email), email.body_plain]
     if email.body_html:
         without_tags = re.sub(r"<[^>]+>", " ", email.body_html)
         parts.append(html.unescape(without_tags))

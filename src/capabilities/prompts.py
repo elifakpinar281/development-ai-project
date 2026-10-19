@@ -4,6 +4,7 @@ import json
 import re
 import secrets
 
+from src.capabilities.email_fields import real_subject
 from src.capabilities.tool_registry import EmailScope, ToolSpec
 from src.schemas.agent import AgentDecision, ChatMessage, ModelVerdict, Observation
 from src.schemas.responses import ParsedEmail
@@ -14,11 +15,7 @@ MAX_DETAILS_CHARS = 800
 
 
 def new_boundary() -> str:
-    """A random marker that the email cannot guess."""
     return secrets.token_hex(4)
-
-
-# --- System prompt ----------------------------------------------------------
 
 
 SYSTEM_PROMPT = """You are SpotThePhish, a careful email security analyst. You investigate ONE email and decide whether it is phishing. Your result is shown to non-technical users (students, university staff, employees).
@@ -65,6 +62,7 @@ def _describe_arguments(parameters: dict) -> str:
         parts.append(f'"{name}" ({type_name}{optional})')
     return ", ".join(parts)
 
+
 def build_email_message(
     email: ParsedEmail,
     scope: EmailScope,
@@ -94,7 +92,7 @@ def build_email_message(
         lines.append(f"To: {', '.join(recipients)}")
     if email.date:
         lines.append(f"Date: {_clean(email.date)}")
-    lines.append(f"Subject: {_clean(email.subject) or '(none)'}")
+    lines.append(f"Subject: {_clean(real_subject(email)) or '(none)'}")
     lines.append(f"Authentication results: {_authentication_summary(email)}")
     lines.append("")
 
@@ -168,7 +166,7 @@ def _clean(text: str) -> str:
     return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
 
 
-# Observations and feedback during the loop
+
 def format_observation(observation: Observation, boundary: str) -> str:
     result = observation.result
     evidence = []

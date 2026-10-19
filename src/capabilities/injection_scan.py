@@ -1,9 +1,9 @@
-
 from __future__ import annotations
 
 import html
 import re
 
+from src.capabilities.email_fields import real_subject
 from src.schemas.responses import ParsedEmail, ToolResult
 
 TOOL_NAME = "scan_prompt_injection"
@@ -51,7 +51,8 @@ _RISK_SCORE = 60
 
 
 def scan_for_prompt_injection(email: ParsedEmail) -> ToolResult:
-    texts = [email.subject, email.body_plain, _visible_and_hidden_html_text(email.body_html)]
+    """Return a ToolResult with status "warning" if injection patterns are found."""
+    texts = [real_subject(email), email.body_plain, _visible_and_hidden_html_text(email.body_html)]
     if not email.body_plain and not email.body_html:
         texts.append(email.raw_text)
 

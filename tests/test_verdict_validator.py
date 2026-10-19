@@ -18,6 +18,7 @@ def answer(verdict="phishing", score=85, evidence=None):
         recommended_action="Report it.", evidence=evidence,
     )
 
+
 def observations(*results):
     items = []
     for number, item in enumerate(results, start=1):

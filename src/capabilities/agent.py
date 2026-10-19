@@ -35,7 +35,7 @@ class _Run:
         self.messages: list[ChatMessage] = []
         self.observations: list[Observation] = []
         self.trace: list[AgentStep] = []
-        self.signatures: dict[str, int] = {}
+        self.signatures: dict[str, int] = {} 
         self.steps_used = 0
         self.model_calls = 0
 
@@ -151,7 +151,7 @@ class AgentAnalyzer(Analyzer):
                 decision = AgentDecision.model_validate_json(prompts.extract_json(raw))
             except ValidationError as error:
                 problems = _validation_problems(error)
-                run.add_step(kind="invalid_output", summary="Invalid decision: " + "- ".join(problems))
+                run.add_step(kind="invalid_output", summary="Invalid decision: " + "; ".join(problems))
                 if attempt == self.max_repairs:
                     raise InvalidModelOutputError(
                         "The model did not return a valid decision.", raw_output=raw
@@ -258,8 +258,6 @@ class AgentAnalyzer(Analyzer):
             raw = self._ask_model(run, schema)
 
         raise VerdictValidationError(["The model did not return a valid verdict."])
-
-    # helpers
 
     def _ask_model(self, run: _Run, schema: dict) -> str:
         run.model_calls += 1

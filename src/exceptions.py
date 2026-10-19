@@ -9,6 +9,7 @@ class SpotThePhishError(Exception):
         super().__init__(self.reason)
 
 
+
 class ToolError(SpotThePhishError):
     tool_status = "error"
 
@@ -71,6 +72,7 @@ class McpServerUnavailableError(ToolUnavailableError):
 class EvalCacheMissError(ToolUnavailableError):
     default_reason = "No cached result exists for this input in replay mode."
 
+
 class InvalidEmailInputError(SpotThePhishError):
     default_reason = "The input could not be read as an email."
     user_message = "Please paste the full email (ideally with headers) or upload an .eml file."
@@ -81,6 +83,7 @@ class InvalidEmailInputError(SpotThePhishError):
             self.user_message = user_message
 
 
+
 class InvalidToolCallError(SpotThePhishError):
     default_reason = "The tool call was rejected."
 
@@ -88,7 +91,7 @@ class InvalidToolCallError(SpotThePhishError):
 class ModelError(SpotThePhishError):
     default_reason = "The AI model could not produce a usable answer."
     user_message = (
-        "The AI analysis could not be completed, so SpotThePhish used its offline checks instead."
+        "The AI analysis could not be completed, so SpotThePhish used its offline checks instead. "
         "This result is less thorough."
     )
 
@@ -96,18 +99,17 @@ class ModelError(SpotThePhishError):
 class ModelUnavailableError(ModelError):
     default_reason = "The Ollama server is not reachable."
     user_message = (
-        "The AI model is not available, so SpotThePhish "
-        "used its offline checks instead. This result is less thorough."
+        "The AI model is not available, so SpotThePhish used its offline checks instead. This result is less thorough."
+        "Check if Ollama is running."
     )
 
 
 class ModelNotFoundError(ModelUnavailableError):
     default_reason = "The configured model is not installed in Ollama."
     user_message = (
-        "The configured AI model is not installed in Ollama (run 'ollama pull <model>'),"
+        "The configured AI model is not installed in Ollama (run 'ollama pull <model>'), "
         "so SpotThePhish used its offline checks instead."
     )
-
 
 
 class ModelTimeoutError(ModelUnavailableError):

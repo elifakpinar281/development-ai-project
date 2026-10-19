@@ -54,7 +54,6 @@ class OfflineAnalyzer(Analyzer):
                     AgentStep(
                         step=len(trace) + 1,
                         kind="automatic_check",
-                        reason="Offline fallback: every offline check is run.",
                         tool_name=result.tool_name,
                         observation_id=observation.observation_id,
                         status=result.status,

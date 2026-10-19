@@ -1,10 +1,12 @@
 from __future__ import annotations
+
 from enum import Enum
 from typing import Any, Dict, List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from src.schemas.responses import ToolResult, Verdict, VerdictType
+
 
 class ChatMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
@@ -17,22 +19,23 @@ class AgentDecision(BaseModel):
     reason: str = Field(
         min_length=1,
         max_length=500,
-        description="One sentence: why this is the right next step."
+        description="One sentence: why this is the right next step.",
     )
     action: Literal["call_tool", "finish"]
     tool_name: Optional[str] = Field(
         default=None,
-        description="The tool to run. Required when action is call_tool."
+        description="The tool to run. Required when action is call_tool.",
     )
     arguments: Dict[str, Any] = Field(
         default_factory=dict,
-        description="Arguments for the tool. Use {} for tools without argument.",
+        description="Arguments for the tool. Use {} for tools without arguments.",
     )
 
     @field_validator("arguments", mode="before")
     @classmethod
     def missing_arguments_mean_none(cls, value):
-        if value is None: return {}
+        if value is None:
+            return {}
         return value
 
     @model_validator(mode="after")
@@ -48,17 +51,17 @@ class EvidenceCitation(BaseModel):
     source: Literal["tool", "email_text"]
     observation_id: Optional[int] = Field(
         default=None,
-        description="Observation number. Required when source is tool."
+        description="Observation number. Required when source is tool.",
     )
     quote: Optional[str] = Field(
         default=None,
         max_length=300,
-        description="Exact text from the email. Required when source is email_text."
+        description="Exact text from the email. Required when source is email_text.",
     )
     claim: str = Field(
         min_length=1,
         max_length=300,
-        description="What this evidence shows, in plain language."
+        description="What this evidence shows, in plain language.",
     )
 
 
@@ -84,6 +87,7 @@ class Observation(BaseModel):
     observation_id: int
     result: ToolResult
 
+
 StepKind = Literal[
     "automatic_check",
     "tool_call",
@@ -91,7 +95,7 @@ StepKind = Literal[
     "repeated_call",
     "invalid_output",
     "step_limit",
-    "final_answer"
+    "final_answer",
 ]
 
 
