@@ -98,7 +98,7 @@ The application code controls which tools exist, validates every tool call, limi
 ## Main user workflow
 
 1. **User input:** The user pastes an email or uploads an `.eml` file in the Gradio interface.
-2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or non-email input, then deterministically parses sender, reply-to, return-path, authentication headers, subject, body text, links and attachment metadata.
+2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input, then deterministically parses sender, reply-to, return-path, authentication headers, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
 3. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the observation to the investigation state. This repeats until the model finishes or the step limit (6 tool calls) is reached.
 4. **Verdict validation:** The model's final report is validated against a Pydantic schema. Every evidence item must reference an actual tool observation, and deterministic rules enforce minimum risk levels (for example, a URL listed as malicious by a reputation service always results in phishing).
 5. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation and investigation trace. The validated verdict is stored in the local case history.
@@ -107,30 +107,29 @@ If the model fails (invalid output, timeout, Ollama unavailable), the applicatio
 
 ## Architecture
 
-Below is the initial planned architecture. It will be kept up to date in [`docs/architecture.md`](docs/architecture.md).
+Details are in [`docs/architecture.md`](docs/architecture.md).
 
 ```text
 User
   ↓ paste email / upload .eml
 Gradio UI (app/ui.py)
-  ↓ shows verdict, evidence, explanation, investigation trace
-Application / AI Service (src/services/ai_service.py)
-  | → Email Parser (src/email_parser.py) for deterministic parsing
-  | → Investigation Agent (src/capabilities/agent.py): observes, decides and acts, proposes actions, maximum of 6 tool calls
-  | → Tool Registry (src/capabilities/tools.py):
-  |    - check_email_authentication (SPF, DKIM, DMARC, From, Reply-To, Return-Path)
-  |    - analyze_links (target URL compared against displayed text, IP addresses, shorteners, punycode)
-  |    - check_lookalike_domain (edit distance)
-  |    - check_domain_age (RDAP registration information)
-  |    - check_url_reputation (external reputation service)
-  |    - inspect_attachments (attachment metadata, suspicious extensions)
-  |    - lookup_case_history (earlier verdicts for the same domains / campaign)
-  | → Case History Store (src/capabilities/memory.py): Postgres, local only
-  | → Verdict Validator (src/schemas/responses.py): Pydantic validation, evidence grounding, safety rules
+  ↓ analyze_email(text) -> verdict, evidence, explanation, warnings, investigation trace
+Application Service (src/services/ai_service.py)
+  | → Email Parser (src/email_parser.py): deterministic parsing
+  | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 tool calls
+  |    → Tool Registry (src/capabilities/tool_registry.py): validates every tool call
+  |       - email checks, in-process (src/capabilities/tools.py):
+  |           check_email_authentication, analyze_links, inspect_attachments
+  |       - domain checks, via MCP server (src/mcp_servers/domain_server.py):
+  |           check_lookalike_domain, check_domain_age, check_url_reputation, lookup_case_history
+  |    → Verdict Validator (src/capabilities/verdict_validator.py): evidence grounding
+  |    → Verdict Policy (src/capabilities/verdict_policy.py): score bands, safety rules
+  | → Offline Fallback (src/capabilities/offline_analyzer.py): used when the model fails
+  | → Case History (src/capabilities/memory.py): PostgreSQL, fingerprints only
   ↓
 Model Client (src/models/model_client.py)
   ↓
-Ollama (Local LLM Server) -> qwen3:8b
+Ollama (local LLM server) -> qwen3:8b
 ```
 
 > **Core Architectural Rule:** The user interface must NEVER communicate directly with the model client or Ollama. All interactions must pass through the service layer (`ai_service.py`).
