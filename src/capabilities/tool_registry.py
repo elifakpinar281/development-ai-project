@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 DOMAIN_ARGUMENTS = {"domain", "sender_domain"}
 URL_ARGUMENTS = {"url"}
+
 _EMPTY_SCHEMA = {"type": "object", "properties": {}, "required": []}
 
 
@@ -34,6 +35,7 @@ class PreparedCall:
 
 
 class ToolSource(ABC):
+
     @abstractmethod
     def specs(self) -> list[ToolSpec]:
         """The tools this source offers."""
@@ -42,11 +44,13 @@ class ToolSource(ABC):
     def call(self, tool_name: str, arguments: dict, email: ParsedEmail) -> ToolResult:
         """Run one tool. Should return a ToolResult with status "unavailable" or "error" instead of raising."""
 
+
 EmailCheck = Callable[[ParsedEmail], ToolResult]
 
 
 @dataclass
 class LocalTool:
+
     name: str
     description: str
     function: EmailCheck
@@ -91,8 +95,9 @@ class McpToolSource(ToolSource):
         return self._client.call(tool_name, arguments)
 
 
-class EmailScope:
 
+class EmailScope:
+    
     def __init__(self, email: ParsedEmail):
         self.hosts: set[str] = set()
         self.urls: set[str] = set()
@@ -124,9 +129,11 @@ class EmailScope:
 
     def contains_domain(self, value: str) -> bool:
         candidate = normalize_host(value)
-        if not candidate or "." not in candidate: return False
+        if not candidate or "." not in candidate:
+            return False
         for host in self.hosts:
-            if host == candidate or host.endswith("." + candidate): return True
+            if host == candidate or host.endswith("." + candidate):
+                return True
         return False
 
     def contains_url(self, value: str) -> bool:
@@ -168,13 +175,11 @@ ArgumentFiller = Callable[[ParsedEmail], dict]
 
 
 class ToolRegistry:
-
     def __init__(
         self,
         sources: list[ToolSource],
         argument_fillers: Optional[dict[str, ArgumentFiller]] = None,
     ):
-
         self._argument_fillers = argument_fillers or {}
         self._specs: dict[str, ToolSpec] = {}
         self._sources: dict[str, ToolSource] = {}
@@ -185,6 +190,7 @@ class ToolRegistry:
                     raise ValueError(f"Two tool sources define the tool '{spec.name}'.")
                 self._specs[spec.name] = spec
                 self._sources[spec.name] = source
+
 
     def tool_names(self) -> list[str]:
         return sorted(self._specs)
@@ -228,12 +234,11 @@ class ToolRegistry:
             cleaned[key] = value
         return PreparedCall(tool_name=tool_name, arguments=cleaned)
 
-
     def execute(self, call: PreparedCall, email: ParsedEmail) -> ToolResult:
         source = self._sources[call.tool_name]
         try:
             result = source.call(call.tool_name, call.arguments, email)
-        except Exception as error:
+        except Exception as error:  # a tool source must never crash the agent
             logger.exception("Tool %s raised instead of returning a result", call.tool_name)
             return ToolResult(
                 tool_name=call.tool_name,
@@ -262,6 +267,7 @@ _JSON_TYPES: dict[str, tuple] = {
     "object": (dict,),
     "null": (type(None),),
 }
+
 
 def _check_arguments_against_schema(tool_name: str, arguments: dict, schema: dict) -> None:
     properties = schema.get("properties") or {}

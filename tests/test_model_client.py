@@ -28,11 +28,13 @@ class FakeOllama:
             raise self.error
         return self.reply
 
+
 def client_with(fake):
     return OllamaModelClient(
         base_url="http://localhost:11434", model_name="qwen3:8b", timeout_seconds=5,
         temperature=0.0, context_tokens=4096, think=False, ollama_client=fake,
     )
+
 
 def test_returns_reply_and_sends_settings():
     fake = FakeOllama(reply={"message": {"role": "assistant", "content": '{"ok": true}'}})
@@ -46,12 +48,15 @@ def test_returns_reply_and_sends_settings():
     assert fake.kwargs["think"] is False
     assert fake.kwargs["options"] == {"temperature": 0.0, "num_ctx": 4096}
 
+
 def test_reads_ollama_chat_response_objects():
     reply = ollama.ChatResponse(message=ollama.Message(role="assistant", content="hi"))
     assert client_with(FakeOllama(reply=reply)).chat(MESSAGES) == "hi"
 
+
 def test_empty_reply_becomes_empty_string():
     assert client_with(FakeOllama(reply={"message": {"content": None}})).chat(MESSAGES) == ""
+
 
 @pytest.mark.parametrize("error,expected", [
     (ollama.ResponseError("model 'qwen3:8b' not found", 404), ModelNotFoundError),
@@ -60,21 +65,23 @@ def test_empty_reply_becomes_empty_string():
     (httpx.ReadTimeout("timed out"), ModelTimeoutError),
     (httpx.RemoteProtocolError("server disconnected"), ModelUnavailableError),
 ])
-
 def test_errors_are_translated(error, expected):
     with pytest.raises(expected) as caught:
         client_with(FakeOllama(error=error)).chat(MESSAGES)
     assert isinstance(caught.value, ModelError)
     assert caught.value.__cause__ is error
 
+
 def test_other_exceptions_are_not_hidden():
     with pytest.raises(TypeError):
         client_with(FakeOllama(error=TypeError("bug"))).chat(MESSAGES)
+
 
 def _free_port():
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         return sock.getsockname()[1]
+
 
 def test_real_ollama_client_with_no_server_running():
     client = OllamaModelClient(
@@ -84,6 +91,7 @@ def test_real_ollama_client_with_no_server_running():
         client.chat(MESSAGES)
     assert "Could not connect to Ollama" in caught.value.reason
     assert "Ollama running" in caught.value.user_message
+
 
 def test_model_without_thinking_mode_is_retried_without_the_setting():
     class NoThinkingOllama(FakeOllama):
@@ -102,6 +110,7 @@ def test_model_without_thinking_mode_is_retried_without_the_setting():
     assert client.chat(MESSAGES) == "ok"
     assert client.chat(MESSAGES) == "ok"
     assert ["think" in call for call in fake.calls] == [True, False, False]
+
 
 def test_other_bad_requests_are_not_retried():
     fake = FakeOllama(error=ollama.ResponseError("invalid format schema", 400))

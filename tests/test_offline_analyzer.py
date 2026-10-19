@@ -63,6 +63,6 @@ def test_offline_checks_use_the_real_injection_scan_and_lookalike_tool():
     email = make_email(sender="security@paypa1.com", links=("https://paypa1.com/login",))
     assert injection_check(email)[0].tool_name == "scan_prompt_injection"
     lookalikes = lookalike_checks(email)
-    assert len(lookalikes) == 1
+    assert len(lookalikes) == 1  # the same domain is checked once
     assert lookalikes[0].status == "warning"
     assert lookalikes[0].details["matched_brand"] == "paypal.com"

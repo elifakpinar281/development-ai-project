@@ -18,11 +18,15 @@ logger = logging.getLogger(__name__)
 
 
 class ModelClient(ABC):
+
     model_name: str
 
     @abstractmethod
     def chat(self, messages: list[ChatMessage], response_schema: Optional[dict] = None) -> str:
-        """Return the model's reply."""
+        """Return the model's reply.
+        response_schema: a JSON schema. When given, the runtime forces the reply into JSON that matches it (structured output).
+        Raises ModelUnavailableError (or a subclass) when the model cannot be reached. Never returns None. An empty reply is returned as "".
+        """
 
 
 class OllamaModelClient(ModelClient):
@@ -37,7 +41,6 @@ class OllamaModelClient(ModelClient):
         think: bool = False,
         ollama_client: Optional[Any] = None,
     ):
-        # ollama_client: only for tests. By default a real ollama.Client is created.
         self.base_url = base_url
         self.model_name = model_name
         self.timeout_seconds = timeout_seconds
