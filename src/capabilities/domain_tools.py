@@ -281,7 +281,7 @@ def _lookup_domain_age(domain: str) -> ToolResult:
     if response.status_code == 404:
         return ToolResult(
             tool_name="check_domain_age",
-            status="warning",
+            status=_status(25),
             finding="No domain registration record was found.",
             risk_score=25,
             evidence=[f"RDAP returned HTTP 404 for {domain}"],

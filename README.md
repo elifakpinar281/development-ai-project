@@ -239,20 +239,17 @@ On computers with less memory, use `qwen3:4b` and set `MODEL_NAME=qwen3:4b` in `
 
 ### 5. Start PostgreSQL
 
-Start the application from the project root folder. The domain tool server is started as `python -m src.mcp_servers.domain_server`, which needs the project root as working directory.
-The case history and the evaluation cache use PostgreSQL. Start it with Docker:
+The case history and the evaluation cache use PostgreSQL. Start it with Docker from the project root folder:
 
 ```bash
 docker compose up -d
 ```
 
+This creates the databases `spotthephish`, `spotthephish_eval` and `spotthephish_test`. If you already had a volume from an older version, run `docker compose down -v` once before starting.
+
 Optional: put a Google Safe Browsing key into `.env` (`SAFE_BROWSING_API_KEY`) to enable the URL reputation check. Without a key the check reports "unavailable" and the analysis continues. Never commit `.env`.
 
-Domain-tool tests that need the database use a separate test database:
-
-```bash
-pytest
-```
+The domain tool server (MCP) is started automatically by the application; you do not need to start it yourself.
 
 ### 6. Run the application
 
@@ -267,8 +264,10 @@ Then open your browser at `http://localhost:7860`.
 ### 7. Run automated tests
 
 ```bash
-pytest
+pytest -rs
 ```
+
+Tests that need the database use the separate database from `TEST_DATABASE_URL` (see `.env.example`). If it is not reachable or the variable is missing, those tests are skipped and `-rs` shows the reason.
 
 ## Evaluation
 This section describes the planned methodology. Results will be added to [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).

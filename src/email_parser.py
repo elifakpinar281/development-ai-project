@@ -334,6 +334,17 @@ def parse_auth_headers(msg: email.message.Message) -> AuthenticationResults:
     auth_results.raw_headers = raw_headers
     return auth_results
 
+def _is_eml_path(content: Union[str, bytes, Path]) -> bool:
+    if isinstance(content, Path):
+        return True
+    if isinstance(content, str) and "\n" not in content and len(content) <= 260 \
+            and content.lower().endswith(".eml"):
+        try:
+            return Path(content).is_file()
+        except OSError:
+            return False
+    return False
+
 #Main parser function
 def parse_email(content: Union[str, bytes, Path]) -> ParsedEmail:
     """Accepts:
@@ -347,7 +358,7 @@ def parse_email(content: Union[str, bytes, Path]) -> ParsedEmail:
     raw_str = ""
 
 #load content if given a file path
-    if isinstance(content, Path) or (isinstance(content, str)) and "\n" not in content and Path(content).exists():
+    if _is_eml_path(content):
         p =Path(content)
         try:
             raw_str = p.read_text(encoding= "utf-8", errors="replace")
