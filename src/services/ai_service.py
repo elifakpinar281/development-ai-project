@@ -35,6 +35,7 @@ class AnalysisService:
         self.clock = clock
 
     def analyze(self, raw_text: str) -> AnalysisResult:
+        """Analyse one email. Never raises."""
         started = self.clock()
         try:
             return self._analyze(raw_text, started)
@@ -121,16 +122,16 @@ def analyze_email(raw_text: str, service: Optional[AnalysisService] = None) -> A
 
 def generate_response(user_message: str, service: Optional[AnalysisService] = None) -> str:
     result = analyze_email(user_message, service)
-    return format_result_as_markdown(result)
+    return format_result_as_text(result)
 
 
-def format_result_as_markdown(result: AnalysisResult) -> str:
+def format_result_as_text(result: AnalysisResult) -> str:
     if result.verdict is None:
         return result.message
 
     verdict = result.verdict
     lines = [
-        f"## {verdict.verdict.upper()} (risk {verdict.risk_score:.0f}/100)",
+        f"{verdict.verdict.upper()} (risk {verdict.risk_score:.0f}/100)",
     ]
     if verdict.is_fallback:
         lines.append("Offline fallback result: the AI model was not used.")
@@ -150,8 +151,8 @@ def format_result_as_markdown(result: AnalysisResult) -> str:
     lines.append("")
     lines.append("Investigation trace")
     for step in result.trace:
-        tool = f" `{step.tool_name}`" if step.tool_name else ""
-        line = f"{step.step}. {step.kind} {tool}: {step.summary}"
+        tool = f" {step.tool_name}" if step.tool_name else ""
+        line = f"{step.step}. {step.kind}{tool}: {step.summary}"
         if step.reason:
             line += f" (why: {step.reason})"
         lines.append(line)
