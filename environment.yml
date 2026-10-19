@@ -1,11 +1,11 @@
 name: dev-ai-project
 
 channels:
-  - conda-forge
   - defaults
+  - conda-forge
 
 dependencies:
-  - python=3.12
+  - python=3.12.14
   - pip
   - pip:
       - ollama
