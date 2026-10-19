@@ -112,7 +112,7 @@ Validated verdicts are stored as fingerprints in a PostgreSQL table (`case_histo
 - Docker (or a local PostgreSQL) is now required to run the full application.
 - If the database is unavailable, `lookup_case_history` returns `unavailable` and saving a verdict raises a controlled `DatabaseUnavailableError`. The analysis itself continues without the history.
 - The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. [TODO: add what the evaluation of the repeated-campaign cases showed.]
-
+- Verdicts from the offline fallback are not stored, so the case history is only filled when the AI model was used. The repeated-campaign evaluation cases therefore need the model.
 ---
 
 ## Decision 6 — Handling external-service failures with custom exceptions
@@ -142,7 +142,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 ## Decision 7 — Domain checks: heuristics, services and thresholds
 
 **Decision:**
-- **Lookalike domains** are detected offline by comparing the domain name with a list of well-known brands (including `hamk.fi`). The rules are: character substitution (for example `paypa1`, `rnicrosoft`, Cyrillic lookalike letters), the same name under a different domain ending, a brand name embedded in a longer name (`hamk-student-login`), and an edit distance of 1 or 2 for names with at least 5 characters.
+- **Lookalike domains** are detected offline by comparing the domain name with a list of well-known brands (including `hamk.fi`). The rules are: character substitution (for example `paypa1`, `amaz0n`, Cyrillic lookalike letters, also inside punycode domains), the same name under a different domain ending, a brand name of at least 4 characters embedded in a longer name (`hamk-student-login`), and an edit distance of 1 or 2 for names with at least 5 characters.
 - **Domain age** is read from RDAP. Domains younger than 7 days get a high risk contribution (90), under 30 days 75, under 90 days 45, under a year 10.
 - **URL reputation** uses the Google Safe Browsing Lookup API when an API key is configured.
 
@@ -163,6 +163,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 - The risk values and thresholds are our initial, hand-chosen settings. They are not statistically tuned. [TODO: review them with the evaluation results and note any change here.]
 - The brand list is small and must be maintained. A legitimate company that shares a name with a listed brand can be flagged.
 - Several limits of the external services are listed under "Known limitations".
+- The first version of the rules produced false alarms: our brand list contains `op.fi`, and a two-letter brand name appears inside many normal words (`shop.fi`, `stop.com`), and a short name was also within edit distance 2 of almost any short domain. We therefore apply the "embedded name" rule only to brand names with at least 4 characters and the edit-distance rule only to names with at least 5 characters. A legitimate domain that merely contains a brand name (for example `hamkkeri.example`) is still flagged. We accept this because the tool only reports a similarity signal, and the verdict also depends on other evidence.
 
 ---
 

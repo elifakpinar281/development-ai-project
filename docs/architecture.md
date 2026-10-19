@@ -9,8 +9,7 @@ This document describes the software architecture of **SpotThePhish**, detailing
 SpotThePhish extends the course starter template with three integrated AI capabilities:
 1. **Agentic Workflow:** Dynamic investigation loop where the model selects checks based on observed findings.
 2. **Tool Integration:** Deterministic security tools for headers, URLs, domains, attachments, and external reputation.
-3. **Memory / Persistent State:** Local SQLite case history store to detect repeat campaigns and accelerate triage.
-
+3. **Memory / Persistent State:** PostgreSQL case history (fingerprints only) to detect repeat campaigns and accelerate triage.
 ```text
 ┌─────────────────────────────────────────────────────────────────────────────────┐
 │                                 User / Browser                                  │
@@ -38,7 +37,7 @@ SpotThePhish extends the course starter template with three integrated AI capabi
 │                                        │                                        │
 │ 3. Memory & Case History               │ 4. Verdict Validator & Safety Guardrails│
 │    src/capabilities/memory.py          │    src/schemas/responses.py            │
-│    - SQLite local campaign cache       │    - Pydantic schema validation        │
+│    - PostgreSQL case history           │    - Pydantic schema validation        │
 │    - Lookup by domain/subject hash     │    - Evidence grounding verification   │
 │                                        │    - Hard override: Malicious URL      │
 │                                        │      forces verdict to "Phishing"      │
@@ -110,10 +109,10 @@ Provides read-only inspection functions:
 - `check_domain_age`: Fetches domain creation dates via RDAP protocol to identify newly registered domains.
 - `check_url_reputation`: Queries external reputation services (optional; returns `"unavailable"` if offline/unconfigured).
 - `inspect_attachments`: Detects dangerous extensions (`.exe`, `.scr`, `.vbs`, double extensions like `.pdf.exe`).
-- `lookup_case_history`: Queries SQLite memory to match previous campaign fingerprints.
+- `lookup_case_history`: Queries the PostgreSQL case history (read only) to match previous campaign fingerprints.
 
 ### `src/capabilities/memory.py` (Case History Store)
-- Persistent, local-only SQLite storage (`data/case_history.db`).
+- Persistent PostgreSQL storage (Docker Compose, database `spotthephish`), fingerprints only, never the email body.
 - Stores minimal matching fingerprints: sender domain, target link domains, subject hash, verdict, risk score, and timestamp.
 - Full email contents and bodies are never stored, ensuring user privacy.
 
@@ -147,3 +146,6 @@ Results are marked `is_fallback` and are not saved to the case history.
 | **Case history database down** | `AnalysisService` catches `DatabaseUnavailableError` when saving. | Result is shown. Warning that it was not saved. |
 | **Empty, oversized or non-email input** | `AnalysisService` / parser (`InvalidEmailInputError`). | Friendly message. No model call. |
 | **Unexpected bug** | `AnalysisService.analyze()` catches it and logs the traceback. | Status `failed` with a friendly message. |
+| **Rate limit, timeout or invalid response from RDAP / Safe Browsing** | Domain tools raise custom exceptions (`src/exceptions.py`); `tool_boundary` converts them into a `ToolResult` with status `"unavailable"`. | Agent continues with the remaining evidence; UI lists the checks that could not be run. |
+| **PostgreSQL case history not reachable** | `memory.py` raises `DatabaseUnavailableError`; `lookup_case_history` returns `"unavailable"`, saving a verdict is skipped. | Analysis continues without history; no raw error is shown. |
+| **MCP tool server cannot start or does not answer** | `mcp_client.py` raises `McpServerUnavailableError`; the calls return `"unavailable"`. | Offline checks still run; the UI labels the domain checks as unavailable. |

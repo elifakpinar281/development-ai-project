@@ -22,7 +22,6 @@ try:
     memory.init_db()
     log.info("Database schema initialized.")
 except Exception as exc:
-    # The server can start even if PostgreSQL is temporarily unavailable.
     log.warning("Database initialization failed: %s", type(exc).__name__)
 
 

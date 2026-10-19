@@ -42,10 +42,6 @@ class Config:
 
     case_history_write: bool = (os.getenv("CASE_HISTORY_WRITE", "true").lower() == "true")
 
-    mcp_server_command: str = os.getenv("MCP_SERVER_COMMAND", "python")
-
-    mcp_server_args: str = os.getenv("MCP_SERVER_ARGS", "-m src.mcp_servers.domain_server")
-
 
 # Instantiate global configuration object
 config = Config()

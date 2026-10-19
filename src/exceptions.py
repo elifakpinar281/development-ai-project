@@ -37,7 +37,7 @@ class ToolUnavailableError(ToolError):
     default_reason = "The check is currently unavailable."
 
     def finding(self) -> str:
-        return f"Check could not be run: {self.reason}."
+        return f"Check could not be run. {self.reason}"
 
 
 class ExternalServiceError(ToolUnavailableError):

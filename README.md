@@ -182,7 +182,6 @@ The four domain and memory tools depend on external systems (RDAP, a reputation 
 
 #### Memory / persistent state
 Phishing arrives in campaigns. SpotThePhish stores a fingerprint of every validated verdict in PostgreSQL (sender domain, link domains, a hash of the normalised subject, verdict, risk score, date) and never the email body. The agent can query it with `lookup_case_history`. A match is evidence, not an automatic answer. See [Decision 5](docs/project-decisions.md).
-SpotThePhish stores a compact record of every validated verdict locally in Postgres.
 The agent can query it with the `lookup_case_history` tool: if the same sender domain, link domain or subject pattern was already judged phishing, the agent can finish with fewer checks and the result tells the user that this is a known campaign.
 
 The history only stores what is needed for matching (domains, subject fingerprint, verdict, timestamp), not full email bodies.
@@ -240,19 +239,17 @@ On computers with less memory, use `qwen3:4b` and set `MODEL_NAME=qwen3:4b` in `
 
 ### 5. Start PostgreSQL
 
-The case history and the evaluation cache use PostgreSQL. Start it with Docker:
+The case history and the evaluation cache use PostgreSQL. Start it with Docker from the project root folder:
 
 ```bash
 docker compose up -d
 ```
 
+This creates the databases `spotthephish`, `spotthephish_eval` and `spotthephish_test`. If you already had a volume from an older version, run `docker compose down -v` once before starting.
+
 Optional: put a Google Safe Browsing key into `.env` (`SAFE_BROWSING_API_KEY`) to enable the URL reputation check. Without a key the check reports "unavailable" and the analysis continues. Never commit `.env`.
 
-Domain-tool tests that need the database use a separate test database:
-
-```bash
-pytest
-```
+The domain tool server (MCP) is started automatically by the application; you do not need to start it yourself.
 
 ### 6. Run the application
 
@@ -267,8 +264,10 @@ Then open your browser at `http://localhost:7860`.
 ### 7. Run automated tests
 
 ```bash
-pytest
+pytest -rs
 ```
+
+Tests that need the database use the separate database from `TEST_DATABASE_URL` (see `.env.example`). If it is not reachable or the variable is missing, those tests are skipped and `-rs` shows the reason.
 
 ## Evaluation
 This section describes the planned methodology. Results will be added to [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
@@ -339,6 +338,8 @@ Each case will record the expected behaviour, the actual result and a status (pa
 - The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Verdicts from the offline fallback are not stored.
 - Evaluation results for online tools are recorded in a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions and say nothing about the accuracy of the live services.
 - The full application needs a running PostgreSQL instance (Docker) for the case history. Without it, only that capability is unavailable.
+- The offline fallback runs only checks that need no network. It cannot look up the age of a domain, so a very new, unknown sender domain without other warning signs can be rated "likely safe" in fallback mode.
+- The lookalike check can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk").
 
 ## Future improvements
 

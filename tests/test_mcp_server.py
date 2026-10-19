@@ -1,16 +1,24 @@
 import asyncio
 import os
 import sys
+from pathlib import Path
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
 
 from src.schemas.responses import ToolResult
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
 
 def test_server_lists_tools_and_answers():
     async def run():
-        params = StdioServerParameters(command=sys.executable, args=["-m", "src.mcp_servers.domain_server"], env=dict(os.environ))
+        params = StdioServerParameters(
+            command=sys.executable,
+            args=["-m", "src.mcp_servers.domain_server"],
+            env=dict(os.environ),
+            cwd=str(PROJECT_ROOT),
+        )
         async with stdio_client(params) as (r, w):
             async with ClientSession(r, w) as s:
                 await s.initialize()
@@ -21,7 +29,7 @@ def test_server_lists_tools_and_answers():
     names, res = asyncio.run(run())
     assert names == {"check_lookalike_domain", "check_domain_age",
                      "check_url_reputation", "lookup_case_history"}
-    assert "save_verdict" not in names  # the model must not be able to write memory
+    assert "save_verdict" not in names
     assert ToolResult.model_validate_json(res.content[0].text).status == "warning"
 
 

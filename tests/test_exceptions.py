@@ -1,5 +1,3 @@
-import pytest
-
 from src.capabilities.tool_boundary import error_to_result, tool_boundary
 from src.exceptions import (
     DatabaseUnavailableError,

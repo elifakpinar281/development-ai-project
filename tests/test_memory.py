@@ -38,10 +38,9 @@ def _verdict(v="phishing", fallback=False):
 
 def test_campaign_match_by_subject_variant(db):
     assert memory.save_verdict(_email(), _verdict())
-    # new campaign mail: different sender and links, same subject pattern (other number)
     r = t.lookup_case_history("other.org", ["other.org"], "RE: urgent: verify invoice 9999")
     assert r.status == "warning" and r.risk_score >= 70
-    assert r.details["matches"][0]["same_subject"] is True
+    assert r.details["same_subject_phishing"] is True and r.details["matches"] == 1
 
 
 def test_no_match_and_known_brand_links_ignored(db):
@@ -94,7 +93,11 @@ def test_save_verdict_raises_when_db_down(monkeypatch):
 
 def test_eval_cache_seed_for_fictional_domain(db, monkeypatch):
     eval_cache.seed("check_domain_age", {"domain": "secure-login-hamk.example"},
-                    ToolResult(tool_name="check_domain_age", status="warning", risk_score=90,
-                               finding="registered 2 days ago", is_offline=False))
+                    ToolResult(tool_name="check_domain_age", status="warning", risk_score=90, finding="registered 2 days ago", is_offline=False))
     monkeypatch.setattr(config, "eval_cache_mode", "replay")
     assert t.check_domain_age("secure-login-hamk.example").risk_score == 90
+
+def test_history_ignores_ip_links_and_bad_sender(db):
+    memory.save_verdict(_email(), _verdict())
+    r = t.lookup_case_history("not a domain", ["192.168.10.5", "evil-pay.com"], "other subject")
+    assert r.status in ("success", "warning") and r.details["matches"] == 1

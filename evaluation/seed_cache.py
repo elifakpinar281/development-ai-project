@@ -20,25 +20,27 @@ CLEAN_URLS = {
 
 
 def _age_result(domain: str, days: int) -> ToolResult:
-    risk = 90.0 if days < 7 else 75.0 if days < 30 else 45.0
+    risk = 90 if days < 7 else 75 if days < 30 else 45
     return ToolResult(
         tool_name="check_domain_age", status="warning", risk_score=risk, is_offline=False,
-        finding=f"{domain} was registered {days} days ago.",
-        evidence=[f"Domain {domain} registered {days} days ago"],
-        details={"domain": domain, "age_days": days, "registered": "seeded"})
+        finding=f"The domain was registered approximately {days} days ago.",
+        evidence=["Registration date: seeded for evaluation", f"Domain age: {days} days"],
+        details={"domain": domain, "age_days": days, "registered": True})
 
 
 def _rep_result(url: str, malicious: bool) -> ToolResult:
     if malicious:
         return ToolResult(
             tool_name="check_url_reputation", status="warning", risk_score=95, is_offline=False,
-            finding="URL is listed as malicious (SOCIAL_ENGINEERING).",
-            evidence=["URL listed by reputation service: SOCIAL_ENGINEERING"],
-            details={"url": url, "threats": ["SOCIAL_ENGINEERING"]})
+            finding="Google Safe Browsing reported a threat for this URL.",
+            evidence=["Threat type: SOCIAL_ENGINEERING"],
+            details={"url": url, "listed": True, "threat_types": ["SOCIAL_ENGINEERING"]})
     return ToolResult(
-        tool_name="check_url_reputation", is_offline=False,
-        finding="URL is not listed by the reputation service (this does not prove it is safe).",
-        details={"url": url, "threats": []})
+        tool_name="check_url_reputation", status="success", risk_score=0, is_offline=False,
+        finding=("The URL was not listed by Google Safe Browsing. "
+                 "This does not guarantee that the URL is safe."),
+        evidence=["No matching threat was returned by Safe Browsing."],
+        details={"url": url, "listed": False})
 
 
 def main(reset_history: bool = False) -> None:
