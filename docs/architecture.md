@@ -9,54 +9,38 @@ This document describes the software architecture of **SpotThePhish**, detailing
 SpotThePhish extends the course starter template with three integrated AI capabilities:
 1. **Agentic Workflow:** Dynamic investigation loop where the model selects checks based on observed findings.
 2. **Tool Integration:** Deterministic security tools for headers, URLs, domains, attachments, and external reputation.
-3. **Memory / Persistent State:** Local SQLite case history store to detect repeat campaigns and accelerate triage.
+3. **Memory / Persistent State:** PostgreSQL case history (fingerprints only) to detect repeat campaigns and accelerate triage.
+
+# TODO: Do as a picture
 
 ```text
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                                 User / Browser                                  │
-└────────────────────────────────────────┬────────────────────────────────────────┘
-                                         │ Pastes text / uploads .eml
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         Presentation Layer (app/ui.py)                          │
-│  - Gradio UI                                                                    │
-│  - Input collection and validation                                              │
-│  - Displays: Verdict badge, Risk Score (0-100), Evidence list, Full Agent Trace │
-└────────────────────────────────────────┬────────────────────────────────────────┘
-                                         │ Calls analyze_email()
-                                         ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│             Application & AI Service Layer (src/services/ai_service.py)         │
-│  - Orchestrates email parsing, agent loop, safety validation, and fallback      │
-├────────────────────────────────────────┬────────────────────────────────────────┤
-│                                        │                                        │
-│ 1. Deterministic Pre-Processing        │ 2. Investigation Agent Loop            │
-│    src/email_parser.py                 │    src/capabilities/agent.py           │
-│    - Extracts headers, body, URLs,     │    - Max 6 tool-call step budget       │
-│      and attachment metadata           │    - Observes results, decides next    │
-│                                        │    - Formulates final verdict          │
-│                                        │                                        │
-│ 3. Memory & Case History               │ 4. Verdict Validator & Safety Guardrails│
-│    src/capabilities/memory.py          │    src/schemas/responses.py            │
-│    - SQLite local campaign cache       │    - Pydantic schema validation        │
-│    - Lookup by domain/subject hash     │    - Evidence grounding verification   │
-│                                        │    - Hard override: Malicious URL      │
-│                                        │      forces verdict to "Phishing"      │
-└─────────────────┬──────────────────────┴───────────────────┬────────────────────┘
-                  │                                          │
-                  │ Invokes read-only tool                   │ Sends prompt & schema
-                  ▼                                          ▼
-┌───────────────────────────────────┐      ┌──────────────────────────────────────┐
-│ Tool Registry                     │      │ Model Client                         │
-│ (src/capabilities/tools.py)       │      │ (src/models/model_client.py)         │
-│ - check_email_authentication      │      └──────────────────┬───────────────────┘
-│ - analyze_links                   │                         │
-│ - check_lookalike_domain          │                         │ Local HTTP (11434)
-│ - check_domain_age (RDAP)         │                         ▼
-│ - check_url_reputation (Ext. API) │      ┌──────────────────────────────────────┐
-│ - inspect_attachments             │      │ Ollama Inference Server              │
-│ - lookup_case_history             │      │ Model: qwen3:8b (fallback: qwen3:4b) │
-└───────────────────────────────────┘      └──────────────────────────────────────┘
+User / Browser
+  │ pastes text or uploads .eml
+  ▼
+Presentation: Gradio UI (app/ui.py)
+  │ analyze_email(text) -> AnalysisResult        (never talks to the model or the tools)
+  ▼
+Application service (src/services/ai_service.py)
+  │ 1. input checks           empty / too large -> REJECTED, no model call
+  │ 2. parse_email            src/email_parser.py (Person 1)
+  │ 3. main analyzer          AgentAnalyzer -> COMPLETED
+  │    on any ModelError      OfflineAnalyzer -> FALLBACK (labelled, with warning)
+  │ 4. save fingerprint       memory.save_verdict (PostgreSQL; failure = warning only)
+  ▼
+AgentAnalyzer (src/capabilities/agent.py)            all objects wired in src/services/service_factory.py
+  │ automatic check: scan_prompt_injection (observation #1)
+  │ loop, max 6 steps:  model decides -> ToolRegistry checks -> tool runs -> observation
+  │ final verdict:      VerdictValidator (grounding) + verdict_policy (score bands, safety rules)
+  │
+  ├──> ModelClient (src/models/model_client.py) ──HTTP──> Ollama, qwen3:8b (structured JSON output)
+  │
+  └──> ToolRegistry (src/capabilities/tool_registry.py)
+         gatekeeper: tool exists, argument types, domains/URLs must appear in the email
+         ├─ LocalToolSource (in-process, Person 1, src/capabilities/tools.py)
+         │    check_email_authentication · analyze_links · inspect_attachments
+         └─ McpToolSource ──stdio──> MCP server (Person 3, src/mcp_servers/domain_server.py)
+              check_lookalike_domain · check_domain_age (RDAP) · check_url_reputation (Safe Browsing)
+              lookup_case_history ──> PostgreSQL (fingerprints only)
 ```
 
 ---
@@ -75,35 +59,64 @@ SpotThePhish extends the course starter template with three integrated AI capabi
 ## 3. Component Details
 
 ### `src/services/ai_service.py` (Application Service)
-Central entry point and controller.
-- Coordinates parsing, launches the investigation agent, validates schemas, and records output.
-- **Controlled Failure Handling:** In the event Ollama is down, unresponsive, or fails schema generation, the service switches to `run_offline_fallback_pipeline()`. This runs all local offline checks deterministically and returns a rule-based verdict labeled `[Offline Fallback Mode]`.
+Single entry point for the UI `AnalysisService.analyze(text) -> AnalysisResult`. It never raises.
+- Rejects empty, oversized or non-email input before any model call (status `rejected`).
+- Runs the main analyzer (the agent). If the agent raises any `ModelError` (Ollama down, model missing, timeout, invalid output, ungrounded verdict), it runs the `OfflineAnalyzer` instead (status `fallback`) and adds a user-facing warning.
+- Saves the verdict fingerprint through `memory.save_verdict`. A database failure only adds a warning.
+- Any unexpected bug becomes status `failed` with a friendly message. The traceback is logged.
+
+### `src/services/service_factory.py` (Composition root)
+The only place that creates the real objects (Ollama client, tool registry, agent, fallback, parser, case recorder) and wires them together through constructors.
+`build_analysis_service()` accepts a different model client and can skip the MCP server, so tests and the evaluation runner use the same wiring as the app.
 
 ### `src/capabilities/agent.py` (Investigation Agent)
-- Manages the ReAct-style observation/action loop.
-- Formats system prompts and enforces a maximum budget of **6 tool calls** to prevent infinite loops, token exhaustion, or excessive latency.
-- Ensures all evidence claims in the final verdict link back to actual observations recorded in the trace.
+- ReAct-style loop. The model returns one JSON decision per step (`call_tool` or `finish`, with a one-sentence reason). The application checks and runs the tool and returns the result as a numbered observation.
+- The prompt-injection scan always runs first (observation #1).
+- Budget of 6 steps. Refused and repeated calls also use a step, so the loop always ends. Repeated calls are not executed again.
+- Invalid JSON or an ungrounded verdict gets one correction attempt. A second failure raises `InvalidModelOutputError` / `VerdictValidationError`.
+- Every step is recorded in the trace (`tool_call`, `rejected_call`, `repeated_call`, `invalid_output`, `step_limit`, `final_answer`).
 
-### `src/capabilities/tools.py` (Tool Registry)
-Provides read-only inspection functions:
-- `check_email_authentication`: Inspects SPF, DKIM, and DMARC headers; verifies alignment between `From`, `Reply-To`, and `Return-Path`.
-- `analyze_links`: Compares displayed anchor text against target href, detects IP-based URLs, URL shorteners, and Punycode/homoglyph spoofing.
-- `check_lookalike_domain`: Calculates Levenshtein edit distance between sender/link domains and well-known university/financial brand domains.
-- `check_domain_age`: Fetches domain creation dates via RDAP protocol to identify newly registered domains.
-- `check_url_reputation`: Queries external reputation services (optional; returns `"unavailable"` if offline/unconfigured).
-- `inspect_attachments`: Detects dangerous extensions (`.exe`, `.scr`, `.vbs`, double extensions like `.pdf.exe`).
-- `lookup_case_history`: Queries SQLite memory to match previous campaign fingerprints.
+### `src/capabilities/prompts.py` (Prompts)
+System prompt, email formatting and the final-answer instructions. 
+The email and every tool result are placed in data blocks with a random boundary per run.
+Block markers inside the email are broken up, so an email cannot close its own block.
+
+### `src/models/model_client.py` (Model Client)
+`ModelClient` interface plus `OllamaModelClient`, the only code that talks to Ollama. 
+Uses structured output (a JSON schema per request), temperature 0 and thinking off. 
+Translates Ollama and network errors into `ModelUnavailableError`, `ModelNotFoundError` and `ModelTimeoutError`.
+
+### `src/capabilities/tools.py` (Email checks, Person 1)
+In-process, read-only checks on the parsed email. The agent reaches them through `LocalToolSource`.
+- `check_email_authentication`: SPF, DKIM and DMARC results, and mismatches between `From`, `Reply-To` and `Return-Path`.
+- `analyze_links`: displayed text versus real target, IP-address links, URL shorteners, punycode.
+- `inspect_attachments`: dangerous types (executables, scripts, macros) and double extensions like `.pdf.exe`, using metadata only.
+
+### `src/mcp_servers/domain_server.py` (Domain checks, Person 3)
+Served over MCP; the agent reaches them through `McpToolSource`.
+- `check_lookalike_domain`: domains that imitate known brands (offline; also used directly by the offline fallback).
+- `check_domain_age`: registration date via RDAP.
+- `check_url_reputation`: Google Safe Browsing (optional key; `unavailable` without it).
+- `lookup_case_history`: earlier verdicts with the same sender, link domains or subject pattern.
 
 ### `src/capabilities/memory.py` (Case History Store)
-- Persistent, local-only SQLite storage (`data/case_history.db`).
+- Persistent PostgreSQL storage (Docker Compose, database `spotthephish`), fingerprints only, never the email body.
 - Stores minimal matching fingerprints: sender domain, target link domains, subject hash, verdict, risk score, and timestamp.
-- Full email contents and bodies are **never** stored, ensuring user privacy.
+- Full email contents and bodies are never stored, ensuring user privacy.
 
-### `src/schemas/responses.py` (Data Models & Safety Guardrails)
-- Defines Pydantic schemas for `ParsedEmail`, `ToolRequest`, `ToolObservation`, `EvidenceItem`, and `PhishingAnalysisResult`.
-- **Deterministic Override Rules:**
-  - If a verified reputation check flags a link as malicious: Force verdict to **Phishing** and Risk Score $\ge 90$.
-  - If SPF/DKIM fail with direct domain impersonation: Minimum Risk Score $\ge 75$ and verdict at least **Suspicious**.
+### `src/capabilities/tool_registry.py` (Tool gatekeeper)
+Every proposed call is checked before it runs: the tool must exist, arguments must match the tool's schema, and `domain` / `url` arguments must appear in the email. 
+Refused calls raise `InvalidToolCallError`, which the agent reports back to the model. 
+`lookup_case_history` arguments are always filled in by the application from the email.
+
+### `src/capabilities/verdict_validator.py` and `verdict_policy.py` (Verdict validation)
+- Every evidence item must cite an observation that actually ran, or quote text that appears word for word in the email.
+- The score is moved into the band of the verdict (safe 0-39, suspicious 40-69, phishing 70-100).
+- Safety rules can only raise a verdict: a link listed by the reputation service forces phishing (risk >= 90), a known phishing campaign, a prompt injection or any warning with risk >= 80 forces at least suspicious. The rules use all tool results, not only the cited ones.
+
+### `src/capabilities/offline_analyzer.py` (Offline fallback)
+Runs every check that needs no model and no network, scores them with a fixed rule and applies the same safety rules. 
+Results are marked `is_fallback` and are not saved to the case history.
 
 ---
 
@@ -111,8 +124,16 @@ Provides read-only inspection functions:
 
 | Failure Scenario | Component Handling | User-Facing Result |
 | :--- | :--- | :--- |
-| **Ollama server offline / connection refused** | `src/models/model_client.py` catches `ConnectError`; alerts `ai_service.py`. | Seamless fallback to deterministic offline heuristic pipeline; output clearly labeled as fallback. |
-| **Model produces invalid JSON or invalid tool call** | `src/capabilities/agent.py` catches parsing error and feeds validation error back into the agent loop as an observation. | The model is prompted to correct its format; counts toward the 6-step budget. |
-| **Step budget reached (6 calls without conclusion)** | `src/capabilities/agent.py` halts the loop and triggers forced synthesis. | Service summarizes observations gathered so far into a provisional assessment. |
-| **External API down or missing API key** | `src/capabilities/tools.py` returns status `"unavailable"` with details. | Agent continues with remaining local tools; UI shows which checks could not be run. |
-| **Empty or non-email text input** | `src/email_parser.py` raises validation error before model invocation. | Gradio displays friendly validation message without consuming model tokens. |
+| **Ollama not running / model not pulled / timeout** | `OllamaModelClient` raises `ModelUnavailableError` / `ModelNotFoundError` / `ModelTimeoutError`; `AnalysisService` catches `ModelError`. | Offline fallback result, clearly labelled, with a warning that says what to fix. |
+| **Model returns invalid JSON** | Agent sends the exact problems back once; a second failure raises `InvalidModelOutputError`. | Usually corrected silently (visible in the trace), otherwise offline fallback. |
+| **Model asks for an unknown tool, wrong arguments or a domain not in the email** | `ToolRegistry` raises `InvalidToolCallError`, the agent reports it to the model as an observation. Counts as a step. | Visible in the trace as `rejected_call`. |
+| **Verdict cites a check that did not run, or quotes text not in the email** | `VerdictValidator` returns the problems - one correction attempt, then `VerdictValidationError`. | Usually corrected, otherwise offline fallback. |
+| **Step budget used up** | Agent stops calling tools and asks for the final verdict with the evidence so far. | Trace shows `step_limit`. |
+| **External API down, rate limit or missing API key** | `tool_boundary` returns a `ToolResult` with status `unavailable`. | Agent continues, the UI lists the checks that could not run. |
+| **Domain tool server (MCP) cannot start** | Factory leaves those tools out and records a startup warning. | Warning on every result. Agent works with the remaining tools. |
+| **Case history database down** | `AnalysisService` catches `DatabaseUnavailableError` when saving. | Result is shown. Warning that it was not saved. |
+| **Empty, oversized or non-email input** | `AnalysisService` / parser (`InvalidEmailInputError`). | Friendly message. No model call. |
+| **Unexpected bug** | `AnalysisService.analyze()` catches it and logs the traceback. | Status `failed` with a friendly message. |
+| **Rate limit, timeout or invalid response from RDAP / Safe Browsing** | Domain tools raise custom exceptions (`src/exceptions.py`); `tool_boundary` converts them into a `ToolResult` with status `"unavailable"`. | Agent continues with the remaining evidence; UI lists the checks that could not be run. |
+| **PostgreSQL case history not reachable** | `memory.py` raises `DatabaseUnavailableError`; `lookup_case_history` returns `"unavailable"`, saving a verdict is skipped. | Analysis continues without history; no raw error is shown. |
+| **MCP tool server cannot start or does not answer** | `mcp_client.py` raises `McpServerUnavailableError`; the calls return `"unavailable"`. | Offline checks still run; the UI labels the domain checks as unavailable. |

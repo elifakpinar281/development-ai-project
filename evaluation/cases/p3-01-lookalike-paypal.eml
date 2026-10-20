@@ -1,0 +1,16 @@
+From: PayPal Service <service@paypa1.example>
+To: student@hamk-test.example
+Subject: Your PayPal account has been limited
+Date: Mon, 12 Oct 2026 09:14:02 +0000
+Message-ID: <p3-01@paypa1.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Dear customer,
+
+We noticed unusual activity. Your account has been limited.
+Please confirm your identity within 24 hours:
+
+http://paypa1.example/verify
+
+PayPal Security Team
