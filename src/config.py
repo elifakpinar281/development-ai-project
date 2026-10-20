@@ -5,13 +5,28 @@ from dotenv import load_dotenv
 # Load environment variables from .env file if present
 load_dotenv()
 
+def _env_bool(name: str, default: str) -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes"}
+
 
 @dataclass
 class Config:
-    """Simple configuration object reading environment variables."""
-
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     model_name: str = os.getenv("MODEL_NAME", "qwen3:8b")
+
+    model_timeout: float = float(os.getenv("MODEL_TIMEOUT", "120"))
+
+    model_temperature: float = float(os.getenv("MODEL_TEMPERATURE", "0"))
+
+    model_context_tokens: int = int(os.getenv("MODEL_CONTEXT_TOKENS", "8192"))
+
+    model_think: bool = _env_bool("MODEL_THINK", "false")
+
+    agent_max_tool_calls: int = int(os.getenv("AGENT_MAX_TOOL_CALLS", "6"))
+
+    max_email_chars: int = int(os.getenv("MAX_EMAIL_CHARS", "200000"))
+
+    prompt_max_body_chars: int = int(os.getenv("PROMPT_MAX_BODY_CHARS", "6000"))
 
     database_url: str = os.getenv("DATABASE_URL", "postgresql://spotthephish:spotthephish@localhost:5432/spotthephish",)
 
