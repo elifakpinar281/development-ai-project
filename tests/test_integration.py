@@ -64,7 +64,7 @@ def test_agent_run_on_a_real_eml_file():
         ]),
     ])
 
-    result = service.analyze(read_case("p3-01-lookalike-paypal.eml"))
+    result = service.analyze(read_case("01-lookalike-paypal.eml"))
 
     assert result.status == AnalysisStatus.COMPLETED
     assert result.verdict.verdict == "phishing"
@@ -77,7 +77,7 @@ def test_agent_run_on_a_real_eml_file():
 def test_all_email_checks_are_offered_to_the_model():
     service, model = build([decide(None), final(evidence=[
         {"source": "tool", "observation_id": 1, "quote": None, "claim": "Scan ran."}])])
-    service.analyze(read_case("p3-01-lookalike-paypal.eml"))
+    service.analyze(read_case("01-lookalike-paypal.eml"))
     tool_names = set(model.schemas[0]["properties"]["tool_name"]["anyOf"][0]["enum"])
     assert tool_names == {"check_email_authentication", "analyze_links", "inspect_attachments"}
 
@@ -88,7 +88,7 @@ def test_arguments_a_tool_does_not_take_are_refused():
         decide(None),
         final(evidence=[{"source": "tool", "observation_id": 1, "quote": None, "claim": "Scan ran."}]),
     ])
-    result = service.analyze(read_case("p3-01-lookalike-paypal.eml"))
+    result = service.analyze(read_case("01-lookalike-paypal.eml"))
     assert result.trace[1].kind == "rejected_call"
 
 
@@ -107,7 +107,7 @@ def test_ollama_down_uses_the_offline_checks_of_person_1_and_3():
 
 def test_offline_fallback_flags_the_lookalike_domain():
     service, _ = build([ModelUnavailableError("Ollama down")])
-    result = service.analyze(read_case("p3-01-lookalike-paypal.eml"))
+    result = service.analyze(read_case("01-lookalike-paypal.eml"))
     assert result.verdict.verdict == "phishing"
     assert any("check_lookalike_domain" in item for item in result.verdict.evidence)
 

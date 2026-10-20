@@ -1,0 +1,18 @@
+From: Chief Financial Officer <cfo@company-finance-approval.example>
+To: finance@company-test.example
+Subject: Urgent confidential payment
+Date: Thu, 15 Oct 2026 13:00:00 +0000
+Message-ID: <p3-11@company-finance-approval.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Please transfer EUR 4,850 to our new supplier immediately.
+This is confidential and must be completed within 30 minutes.
+
+Do not call me because I am in a meeting.
+
+Payment portal:
+http://company-finance-approval.example/transfer
+
+Regards,
+CFO

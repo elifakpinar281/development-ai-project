@@ -111,7 +111,7 @@ Validated verdicts are stored as fingerprints in a PostgreSQL table (`case_histo
 **Trade-offs:**
 - Docker (or a local PostgreSQL) is now required to run the full application.
 - If the database is unavailable, `lookup_case_history` returns `unavailable` and saving a verdict raises a controlled `DatabaseUnavailableError`. The analysis itself continues without the history.
-- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. [TODO: add what the evaluation of the repeated-campaign cases showed.]
+- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. In the evaluation, repeated-campaign cases required a median of 2 tool calls, compared with 3 for the other cases. This suggests that case history can reduce the number of checks when a matching previous verdict is available. However, fallback verdicts are not stored, so the benefit depends on the model successfully completing an analysis and saving a validated verdict.
 - Verdicts from the offline fallback are not stored, so the case history is only filled when the AI model was used. The repeated-campaign evaluation cases therefore need the model.
 ---
 
@@ -160,7 +160,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 - **Common threshold:** A result at or above a risk contribution of 40 is shown as a warning, below it as a normal result. A missing RDAP record is only a weak signal (25), because not every registry publishes RDAP data.
 
 **Trade-offs:**
-- The risk values and thresholds are our initial, hand-chosen settings. They are not statistically tuned. [TODO: review them with the evaluation results and note any change here.]
+- The risk values and thresholds are our initial, hand-chosen settings. They are not statistically tuned. The evaluation showed that detection quality depends on the evidence available to the agent. When online checks are unavailable, the offline fallback can still detect lookalike domains, but it cannot reliably establish domain age or current URL reputation. The thresholds should therefore be treated as engineering choices rather than statistically calibrated probabilities of phishing. Future work should evaluate them against a larger, labeled dataset.
 - The brand list is small and must be maintained. A legitimate company that shares a name with a listed brand can be flagged.
 - Several limits of the external services are listed under "Known limitations".
 - The first version of the rules produced false alarms: our brand list contains `op.fi`, and a two-letter brand name appears inside many normal words (`shop.fi`, `stop.com`), and a short name was also within edit distance 2 of almost any short domain. We therefore apply the "embedded name" rule only to brand names with at least 4 characters and the edit-distance rule only to names with at least 5 characters. A legitimate domain that merely contains a brand name (for example `hamkkeri.example`) is still flagged. We accept this because the tool only reports a similarity signal, and the verdict also depends on other evidence.
@@ -201,7 +201,7 @@ The two online tools (domain age and URL reputation) can run in three modes, set
   - Memory: campaign match through a subject variant, ignored brand links, fallback verdicts not stored, writing can be disabled, controlled error if the database is down.
   - Evaluation cache: record, then replay, cache miss, seeding.
   - MCP: the server lists exactly the four tools, the write function is not exposed, the synchronous client works and unknown tools are rejected.
-- **Hand-crafted evaluation cases:** Five emails with six cases (`evaluation/p3_test_cases.json`): two lookalike domains, one newly registered domain, a repeated campaign (first report and repeat) and one failure case with unavailable online checks. [TODO: record actual results and status per case.]
+- **Hand-crafted evaluation cases:** Five emails with six cases (`evaluation/martina_test_cases.json`): two lookalike domains, one newly registered domain, a repeated campaign (first report and repeat) and one failure case with unavailable online checks. [TODO: record actual results and status per case.]
 
 
 ---
@@ -268,6 +268,14 @@ The refusal reason is sent back to the model so it can choose again.
 - **Privacy:** Only domains and links from the email are ever sent to external services.
 - **Clear errors:** Argument problems are found in one place, before any network request, and the model receives an exact explanation.
 - **One registry for all tools:** in-process email checks (`LocalToolSource`) and MCP tools (`McpToolSource`) are merged into one list, so the agent does not know or care where a tool runs.
+
+**Testing findings:**
+
+The tool registry tests cover valid and invalid tool calls, including unknown tools, missing or incorrectly typed arguments, domains that do not appear in the email, and URLs that are not part of the email. They also verify that a parent domain of a host present in the email is allowed.
+
+The agent tests verify that refused calls consume the step budget and that the rejection reason is returned to the model as an observation. Prompt-injection tests also check that instructions embedded in email content cannot directly execute tools or bypass the application's validation rules.
+
+These checks reduce the risk of prompt injection leading to unauthorised tool calls. However, they do not guarantee that the model will always choose the most useful check or interpret every email correctly. The application therefore retains control over tool execution, and the final verdict is independently validated against the evidence collected during the run.
 
 ---
 
