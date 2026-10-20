@@ -1,0 +1,20 @@
+From: Posti Notification <delivery@posti-trackings.example>
+To: student@hamk-test.example
+Subject: Your package could not be delivered - Receipt attached
+Date: Mon, 20 Oct 2026 11:30:00 +0300
+Message-ID: <p1-03@posti-trackings.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="boundary-att-003"
+
+--boundary-att-003
+Content-Type: text/plain; charset="utf-8"
+
+Your parcel #FI8923481 is awaiting pickup fee payment.
+Please see the attached receipt for details.
+--boundary-att-003
+Content-Type: application/octet-stream; name="Posti_Delivery_Receipt.pdf.exe"
+Content-Disposition: attachment; filename="Posti_Delivery_Receipt.pdf.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAAA4fug4AtAnNIbgBTM0hVGhpcyBwcm9ncmFtIGNhbm5vdCBiZSBydW4gaW4gRE9TIG1vZGUuDQ0KJA==
+--boundary-att-003--

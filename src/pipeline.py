@@ -51,13 +51,13 @@ def run_offline_fallback(email_input: Union[ParsedEmail, Dict[str, Any]]) -> Ver
     else:
         recommendations = ["Email appears legitimate based on available metadata. Normal caution applies."]
 
-    return Verdict(classification=classification,
+    return Verdict(verdict=classification,
         confidence=0.85 if all_evidence else 0.70,
         risk_score=total_risk,
         explanation=explanation,
-        red_flags=all_evidence,
-        recommended_actions=recommendations,
-        tool_results=tool_results,
+        evidence=all_evidence,
+        recommended_action=" ".join(recommendations),
+        tools_run=[r.tool_name for r in tool_results],
         is_fallback=True)
 
 def run_fixed_pipeline(email_input: Union[ParsedEmail, Dict[str, Any]], model_callable: Optional[Callable[[str], str]] = None) -> Verdict:
@@ -110,13 +110,13 @@ def run_fixed_pipeline(email_input: Union[ParsedEmail, Dict[str, Any]], model_ca
         for r in tool_results:
             all_evidence.extend(r.evidence)
 
-        return Verdict(classification=classification,
+        return Verdict(verdict=classification,
             confidence=0.80,
             risk_score=risk_score,
             explanation=llm_response.strip(),
-            red_flags=all_evidence,
-            recommended_actions=["Review findings before interacting with sender."],
-            tool_results=tool_results,
+            evidence=all_evidence,
+            recommended_action="Review findings before interacting with sender.",
+            tools_run=[r.tool_name for r in tool_results],
             is_fallback=False)
 
     except Exception:
