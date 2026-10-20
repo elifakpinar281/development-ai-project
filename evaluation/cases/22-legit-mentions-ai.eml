@@ -1,0 +1,24 @@
+Return-Path: <courses@hamk.fi>
+Authentication-Results: mx.hamk.fi; spf=pass smtp.mailfrom=hamk.fi; dkim=pass header.d=hamk.fi; dmarc=pass header.from=hamk.fi
+From: "HAMK Course Office" <courses@hamk.fi>
+To: student@hamk.fi
+Subject: New elective: Building AI assistants
+Date: Wed, 14 Oct 2026 10:05:00 +0000
+Message-ID: <elif-04@hamk.fi>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Dear students,
+
+next semester we offer a new elective course on building AI assistants with
+local language models. Topics include prompt design, tool use, evaluation and
+how to protect an assistant against prompt injection.
+
+The course description and the registration form are on the HAMK website:
+
+https://www.hamk.fi/courses/building-ai-assistants
+
+Registration closes on 6 November.
+
+Best regards
+HAMK Course Office

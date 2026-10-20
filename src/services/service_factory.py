@@ -3,11 +3,13 @@ from __future__ import annotations
 import atexit
 import logging
 import threading
+from dataclasses import dataclass, field
 from typing import Optional
 
 from src.capabilities import domain_tools, memory
 from src.capabilities import tools as email_tools
 from src.capabilities.agent import AgentAnalyzer
+from src.capabilities.analyzer import Analyzer
 from src.capabilities.email_fields import real_subject
 from src.capabilities.injection_scan import scan_for_prompt_injection
 from src.capabilities.mcp_client import DomainToolsClient
@@ -61,12 +63,24 @@ EMAIL_TOOLS: list[LocalTool] = [
 ]
 
 
-def build_analysis_service(
+ANALYZER_NAMES = ("agent",)
+
+@dataclass
+class Components:
+
+    settings: Config
+    model_client: ModelClient
+    registry: ToolRegistry
+    validator: VerdictValidator
+    fallback: OfflineAnalyzer
+    startup_warnings: list[str] = field(default_factory=list)
+
+
+def build_components(
     settings: Config = config,
-    parse_email: EmailParser = default_parse_email,
     model_client: Optional[ModelClient] = None,
     start_domain_server: bool = True,
-) -> AnalysisService:
+) -> Components:
     startup_warnings: list[str] = []
 
     if model_client is None:
@@ -92,28 +106,59 @@ def build_analysis_service(
 
     registry = ToolRegistry(sources, argument_fillers={"lookup_case_history": case_history_arguments})
 
-    agent = AgentAnalyzer(
-        model_client=model_client,
-        registry=registry,
-        validator=VerdictValidator(),
-        max_steps=settings.agent_max_tool_calls,
-        max_body_chars=settings.prompt_max_body_chars,
-        automatic_checks=[scan_for_prompt_injection],
-    )
-
     offline_checks: list[OfflineCheck] = [injection_check, lookalike_checks]
     for tool in EMAIL_TOOLS:
         offline_checks.append(as_offline_check(tool.function))
-    fallback = OfflineAnalyzer(checks=offline_checks)
 
-    return AnalysisService(
-        parse_email=parse_email,
-        main_analyzer=agent,
-        fallback_analyzer=fallback,
-        case_recorder=memory.save_verdict,
-        max_input_chars=settings.max_email_chars,
+    return Components(
+        settings=settings,
+        model_client=model_client,
+        registry=registry,
+        validator=VerdictValidator(),
+        fallback=OfflineAnalyzer(checks=offline_checks),
         startup_warnings=startup_warnings,
     )
+
+
+def build_analyzer(name: str, components: Components) -> Analyzer:
+    settings = components.settings
+    if name == "agent":
+        return AgentAnalyzer(
+            model_client=components.model_client,
+            registry=components.registry,
+            validator=components.validator,
+            max_steps=settings.agent_max_tool_calls,
+            max_body_chars=settings.prompt_max_body_chars,
+            automatic_checks=[scan_for_prompt_injection],
+        )
+    raise ValueError(f"Unknown analyzer '{name}'. Choose one of: {', '.join(ANALYZER_NAMES)}.")
+
+
+def build_service_from(
+    components: Components,
+    analyzer: str = "agent",
+    parse_email: EmailParser = default_parse_email,
+    save_cases: bool = True,
+) -> AnalysisService:
+    return AnalysisService(
+        parse_email=parse_email,
+        main_analyzer=build_analyzer(analyzer, components),
+        fallback_analyzer=components.fallback,
+        case_recorder=memory.save_verdict if save_cases else None,
+        max_input_chars=components.settings.max_email_chars,
+        startup_warnings=components.startup_warnings,
+    )
+
+
+def build_analysis_service(
+    settings: Config = config,
+    parse_email: EmailParser = default_parse_email,
+    model_client: Optional[ModelClient] = None,
+    start_domain_server: bool = True,
+    analyzer: str = "agent",
+) -> AnalysisService:
+    components = build_components(settings, model_client, start_domain_server)
+    return build_service_from(components, analyzer, parse_email)
 
 
 _default_service: Optional[AnalysisService] = None
