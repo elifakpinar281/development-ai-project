@@ -12,3 +12,4 @@ To maintain privacy, security, and repository health, **DO NOT COMMIT**:
 4. **Credentials & Secrets:** Never store API keys, tokens, or passwords in data files.
 
 Use this directory responsibly for small, sample datasets and public documentation.
+Akpinar

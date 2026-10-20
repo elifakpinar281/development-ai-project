@@ -1,6 +1,25 @@
 # Project decisions
 
-Use this decision log to document significant technical and architectural choices made by your team during development.
+This log records the important technical decisions of the team. Every decision follows the same structure. It states what we decided, which alternatives we considered, why we chose this option and which trade-offs we accept.
+
+| No. | Decision | Area |
+|---|---|---|
+| 1 | Model selection | Model |
+| 2 | Additional AI capability | Capabilities |
+| 3 | Architecture | Architecture |
+| 4 | Domain tools as an MCP server | Tools |
+| 5 | Case history in PostgreSQL | Memory |
+| 6 | Handling external-service failures with custom exceptions | Tools |
+| 7 | Domain checks: heuristics, services and thresholds | Tools |
+| 8 | Reproducible evaluation with an evaluation cache | Evaluation |
+| 9 | Structured output, temperature 0, thinking off | Model |
+| 10 | Design of the agent loop | Agent |
+| 11 | Tool arguments must come from the email | Agent |
+| 12 | Grounded evidence, score bands and safety rules | Agent |
+| 13 | Model exceptions and an offline fallback | Agent |
+| 14 | Three configurations for the evaluation | Evaluation |
+ 
+
 
 ## Decision 1 — Model selection
 
@@ -206,131 +225,170 @@ The two online tools (domain age and URL reputation) can run in three modes, set
 
 ---
 
-## Decision 9 - Model interaction: structured output, temperature 0, thinking off
+## Decision 9 - Structured output, temperature 0 and thinking off
 
 **Decision:**
-The agent talks to the model through Ollama's structured output. Every request includes a JSON schema (`AgentDecision` for each step, `ModelVerdict` for the final answer), and Ollama constrains the reply to that schema. 
-We do not use Ollama's native tool-calling format. 
-
-Settings: temperature 0, Qwen3 thinking mode off, context window 8192 tokens, 120-second timeout per call (all configurable in `.env`). All Ollama access goes through one class, `OllamaModelClient`, behind a small `ModelClient` interface.
+The application talks to the model through structured output in Ollama. Every request contains a JSON schema, AgentDecision for each step and ModelVerdict for the final answer, and Ollama limits the reply to that schema. The schema for a decision lists the real tool names, so the model cannot even write an unknown name. We do not use the native tool calling format of Ollama. The settings are temperature 0, Qwen3 thinking off, a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in .env. All access to Ollama goes through one class, OllamaModelClient.
 
 **Alternatives considered:**
-- **Native tool calling:** The model returns `tool_calls`, and the final verdict is free text. Small local models sometimes write tool calls into the text instead, and the final verdict would still need a separate format, so we would need two parsing paths.
-- **Free-text JSON (prompt only, no schema):** Simpler, but an 8B model produces invalid JSON noticeably more often.
-- **Thinking mode on:** Better reasoning on hard cases, but several times slower per step, and with up to 8 model calls per email the waiting time is not acceptable. The agent already writes a short reason for every step, which serves as a visible trace.
+With native tool calling, the model returns tool calls, but the final verdict is free text. Small local models sometimes write tool calls into the text instead, so we would need two parsing paths. JSON requested only in the prompt, without a schema, is simpler, but an 8B model then produces invalid JSON much more often. Thinking mode improves reasoning on hard cases, but it makes every step several times slower, and an analysis needs several model calls.
 
-**Why we chose this:**
-- **Fewer invalid outputs:** The schema limits tool_name to the real tool names and verdict to the three allowed values, so most format errors cannot happen at all. The application still validates everything with Pydantic (defence in depth), because a schema cannot check meaning.
-- **One parsing path:** Each step and the final answer are plain JSON validated by Pydantic models.
-- **Repeatable evaluation:** Temperature 0 makes the same email give (nearly) the same result, so the three configurations can be compared fairly.
-- **Replaceable runtime:** The rest of the application depends on `ModelClient`, not on Ollama. Tests use a scripted fake model.
+**Why we chose this**
+The schema prevents most format errors before they happen. The application still validates every answer with Pydantic, because a schema cannot check meaning. There is only one parsing path for steps and for the final answer. Temperature 0 makes repeated runs nearly identical, which keeps the evaluation fair. The agent already writes a short reason for each step, which gives a visible trace without thinking mode. Because the rest of the application depends only on the ModelClient interface, the tests can use a scripted fake model.
+
+**Trade-offs**
+Without thinking mode, the model may miss subtle cases that longer reasoning would catch. If a model version does not support the think setting, the client repeats the request once without it.
 
 ---
 
-## Decision 10 - Agent loop design
+## Decision 10 - Design of the agent loop
 
 **Decision:**
-`AgentAnalyzer` runs a ReAct-style loop. The model decides and the application acts:
+The AgentAnalyzer runs a loop in the ReAct style. The model decides and the application acts. The flowchart is in section 4 of architecture.md.
 
-1. The application runs the prompt-injection scan automatically (observation #1).
-2. Each step, the model returns `call_tool` (one tool and its arguments, with a one-sentence reason) or `finish`.
-3. The application checks the call (Decision 11), runs it and sends the result back as a numbered observation.
-4. After `finish`, or when the step budget is used up, the model writes the final verdict, which is validated (Decision 12).
+1. The application runs the prompt injection scan, which becomes observation 1.
+2. In each step, the model returns either a tool call with its arguments and a one-sentence reason, or the signal to finish.
+3. The application checks the call (Decision 11), runs it and returns the result as a numbered observation.
+4. After finishing, or when the budget is used up, the model writes the final verdict, which is validated (Decision 12).
 
 **Rules the application enforces:**
-- **Step budget of 6:** Every decision that is not `finish` uses a step, including refused and repeated calls. The loop therefore always ends, even if the model keeps asking for invalid tools.
-- **No repeated checks:** The same tool with the same arguments is not run twice. The model is pointed to the earlier observation instead.
-- **Bounded repair:** If an answer is not valid JSON or breaks the evidence rules, the model gets the exact problems back and one chance to correct it (max_repairs = 1). A second failure ends the run with a `ModelError`, and the service switches to the fallback.
-- **App-filled arguments:** `lookup_case_history` always searches for the email's own sender, link domains and subject. The model only decides whether to run it, not what to search for.
-- **No state between emails:** Every analysis creates a fresh run object, so one email can never influence the next.
 
-**Why:**
-- The agent is the capability we argue for in the README, so the application, not the model, must stay in control of what runs and when it stops.
-- Counting refused calls prevents an endless loop and keeps the worst-case latency bounded (at most 6 tool calls and a fixed maximum number of model calls).
-- The trace records every step with its kind (`tool_call`, `rejected_call`, `repeated_call`, `invalid_output`, `step_limit`, `final_answer`), the model's reason and the duration. The UI shows it, and the evaluation can count tool calls and failures from it.
+- The budget is six steps. Every decision that is not a finish uses a step, including refused and repeated calls. The loop therefore always ends.
+- The same tool with the same arguments is not run twice. The model is pointed to the earlier observation instead.
+- An invalid answer gets exactly one correction attempt. A second invalid answer ends the run with a ModelError, and the service switches to the fallback.
+- The arguments of lookup_case_history are always filled in by the application from the email. The model only decides whether to run it.
+- Every analysis creates a fresh run object, so one email can never influence the next one.
+
+**Why we chose this**
+
+The agent is the capability we argue for, so the application must stay in control of what runs and when it stops. Counting refused calls prevents endless loops and keeps the longest possible waiting time bounded. The trace records every step with its kind, the reason given by the model and its duration. The interface shows it, and the evaluation counts tool calls and failures from it.
+
+**Trade-offs**
+Six steps can be too few for an email with many links and domains. In that case the model has to choose the most important checks. A refused call costs a step, so a confused model ends with less evidence.
+
 
 ---
 
-## Decision 11 - Tool calls may only use domains and links from the email
+## Decision 11 - Tool arguments must come from the email
 
 **Decision:**
-`ToolRegistry` (`src/capabilities/tool_registry.py`) checks every proposed tool call before it runs. 
-A call is refused (`InvalidToolCallError`) when the tool is unknown, an argument is missing, unknown or has the wrong type, or when a `domain` or `url` argument does not appear in the email. 
-A parent domain of a host in the email is allowed (`paypa1.com` for `login.paypa1.com`). 
-The refusal reason is sent back to the model so it can choose again.
+The ToolRegistry in src/capabilities/tool_registry.py checks every proposed tool call before it runs. A call is refused with InvalidToolCallError when the tool is unknown or when an argument is missing, unknown or has the wrong type. A call is also refused when a domain or link argument does not appear in the email. A parent domain of a host in the email is allowed, for example paypa1.com for login.paypa1.com. The reason for the refusal is sent back to the model, so it can choose again.
+
 
 **Alternatives considered:**
-- **Trust the model's arguments:** Simpler, but text inside a phishing email could steer the agent to look up an attacker's server or send unrelated data to an external service.
-- **Let the application choose all arguments:** Safe, but then the model could no longer decide which of several domains or links is worth checking, which is the point of the agent.
+Trusting the arguments of the model would be simpler. However, text inside a phishing email could then steer the agent to look up an attacker's server or send unrelated data to an external service. Letting the application choose all arguments would be safe, but then the model could no longer decide which of several links is worth checking, which is the point of the agent.
 
-**Why:**
-- **Prompt-injection containment:** Even if the model were manipulated, it can only check what is already in the email.
-- **Privacy:** Only domains and links from the email are ever sent to external services.
-- **Clear errors:** Argument problems are found in one place, before any network request, and the model receives an exact explanation.
-- **One registry for all tools:** in-process email checks (`LocalToolSource`) and MCP tools (`McpToolSource`) are merged into one list, so the agent does not know or care where a tool runs.
+**Why we chose this**
+Even a manipulated model can only check what is already in the email. Only domains and links from the email are ever sent to external services. All argument problems are found in one place, before any network request, and the model receives an exact explanation. The email checks and the MCP tools are merged into one registry, so the agent does not need to know where a tool runs.
+
+**Trade-offs**
+A domain that is only mentioned in an attachment name or an image cannot be checked, because it does not appear in the parsed text.
 
 ---
 
-## Decision 12 - Verdict validation: grounded evidence, score bands and safety rules
+## Decision 12 - Grounded evidence, score bands and safety rules
 
 **Decision:**
-The model's final answer must match `ModelVerdict`, and `VerdictValidator` then checks every evidence item:
-- `source: "tool"`: the cited observation must exist in this run and must have actually run (status success or warning). An unavailable check cannot be cited.
-- `source: "email_text"`: the quote must appear word for word in the email's subject or body (ignoring case, spacing and curly quotes).
+The final answer of the model must match the ModelVerdict schema. The VerdictValidator then checks every evidence item. An item that cites a tool must name an observation of this run with the status success or warning, so an unavailable check cannot be cited. An item that quotes the email must appear word for word in the subject or body. Case, spacing and typographic quotes are ignored in this comparison.
 
-After that, fixed rules in `src/capabilities/verdict_policy.py` are applied:
-- **Score bands:** likely safe 0–39, suspicious 40–69, phishing 70–100. If the score does not fit the verdict, the score is moved into the band (the verdict wins, because it is what the user acts on).
-- **Safety rules** (can only raise, never lower):
+After that, the fixed rules in src/capabilities/verdict_policy.py are applied. The score is moved into the band of the verdict. Likely safe covers 0 to 39, suspicious covers 40 to 69 and phishing covers 70 to 100. The verdict wins, because it is what the user acts on. The safety rules can only raise a verdict and never lower it.
 
-| Rule | Condition | Minimum |
+| Rule | Condition | Minimum result |
 |---|---|---|
-| `url_listed_as_malicious` | the reputation service lists a link | phishing, 90 |
-| `known_phishing_campaign` | the same sender or subject was judged phishing before | suspicious, 60 |
-| `prompt_injection` | the email contains instructions aimed at AI tools | suspicious, 50 |
-| `high_risk_finding` | any check returned a warning with risk >= 80 | suspicious, 50 |
+| url_listed_as_malicious | The reputation service lists a link | Phishing with risk 90 |
+| known_phishing_campaign | The same sender or subject was judged phishing before | Suspicious with risk 60 |
+| prompt_injection | The email contains instructions aimed at AI tools | Suspicious with risk 50 |
+| high_risk_finding | A check returned a warning with risk 80 or more | Suspicious with risk 50 |
 
-The rules look at all tool results of the run, not only the cited ones, so the model cannot avoid a rule by leaving a finding out. 
-When a rule raises the verdict, the explanation says so and the recommended action is replaced with the standard action for the new verdict.
+The rules look at all tool results of the run and not only at the cited ones. The model therefore cannot avoid a rule by leaving a finding out. When a rule raises the verdict, the explanation says so, and the recommended action is replaced with the standard action for the new verdict.
 
-**Alternatives considered:**
-- **Evidence only from tools:** Grounding would be stricter, but the language analysis (urgency, threats, requests for passwords) is exactly what the LLM adds. Exact quotes make that analysis checkable too.
-- **Drop invalid evidence silently:** Friendlier, but it hides a model failure. We ask for one correction and fall back if it fails again.
-- **Let the model decide everything:** A security verdict that can be talked down by text inside the email is not acceptable.
+**Alternatives considered**
+Allowing evidence only from tools would make grounding stricter. However, the language analysis of urgency, threats and requests for passwords is exactly what the model adds, and exact quotes make this analysis checkable too. Dropping invalid evidence silently would be friendlier, but it would hide a model failure. Letting the model decide everything is not acceptable for a security verdict that text inside the email could talk down.
 
-**Why:**
-- The user sees only evidence the application has verified, which is our main difference from chatbot-style phishing checkers.
-- The evaluation can measure grounding automatically, because every evidence item has a checkable source.
+**Why we chose this**
+The user only sees evidence that the application has verified. This is the main difference to chatbot-style phishing checkers. The evaluation can also measure grounding automatically, because every evidence item has a checkable source.
+
+**Trade-offs**
+The safety rules can raise a legitimate email to suspicious when one tool gives a high risk value by mistake. This is the price for never letting a clear warning be ignored.
+
 
 ---
 
-## Decision 13 - Model failures: own exceptions and an offline fallback
+## Decision 13 - Model exceptions and an offline fallback
 
 **Decision:**
-`OllamaModelClient` translates every Ollama or network error into our own exceptions: `ModelUnavailableError` (not reachable or server error), `ModelNotFoundError` (model not pulled) and `ModelTimeoutError`. The agent raises `InvalidModelOutputError` or `VerdictValidationError` when a repaired answer is still invalid. All five are subclasses of `ModelError`. `AnalysisService` catches `ModelError` in one place and runs `OfflineAnalyzer` instead: every offline check (prompt-injection scan, lookalike domains, Person 1's email checks), a simple score (highest warning + 10 per extra warning) and the same safety rules. The result is labelled as a fallback, and the warning tells the user what went wrong.
+OllamaModelClient translates every Ollama or network error into our own exceptions. ModelUnavailableError means that Ollama cannot be reached or returned a server error. ModelNotFoundError means that the model is not installed. ModelTimeoutError means that a call took too long. The agent raises InvalidModelOutputError or VerdictValidationError when a corrected answer is still invalid. All five inherit from ModelError.
+
+The AnalysisService catches ModelError in one place and runs the OfflineAnalyzer instead. The fallback runs every check that needs neither model nor network. These are the prompt injection scan, the lookalike check and the email checks of Person 1. The score is the highest warning plus 10 for every further warning, and the same safety rules are applied. The result is labelled as a fallback, and the warning tells the user what went wrong.
 
 **Rules:**
-- An exception class exists only if some code catches it specifically. `InvalidToolCallError` is caught by the agent, `ModelError` and `InvalidEmailInputError` by the service, `ToolError` by `tool_boundary` (Decision 6).
-- Each model exception carries a `reason` for the log and a `user_message` for the UI. Raw library errors never reach the user.
-- Original errors are kept with `raise ... from error`, so the log shows the real cause.
-- `AnalysisService.analyze()` never raises: an unexpected bug becomes status `FAILED` with a friendly message and a full traceback in the log. Tests call the internal method, so bugs still fail the tests.
-- Every analyzer (agent, fallback, the two baselines) implements the same `Analyzer` interface, so switching to the fallback needs no special code.
+An exception class only exists if some code catches it specifically. The agent catches InvalidToolCallError. The service catches ModelError and InvalidEmailInputError. The tool_boundary decorator catches ToolError (Decision 6).
 
-**Why:**
-- The user always gets a usable answer, even without the model, and is told clearly that it is less thorough.
-- The fallback never sends data over the network and never depends on the model, so it works in exactly the situation it is needed for.
-- Fallback verdicts are not saved to the case history, so a weaker result cannot influence later analyses.
+Each model exception carries a reason for the log and a user message for the interface. Raw library errors never reach the user. The original error is kept with raise from, so the log shows the real cause.
+
+The method analyze of the AnalysisService never raises. An unexpected bug becomes the status failed with a friendly message and a full traceback in the log. The tests call the inner method, so bugs still make the tests fail.
+
+Every analyzer implements the same Analyzer interface, so switching to the fallback needs no special code.
+
+
+**Why we chose this**
+The user always gets a usable answer, even without the model, and is told clearly that it is less thorough. The fallback never sends data over the network and never depends on the model, so it works in exactly the situation it is built for. Fallback verdicts are not saved to the case history, so a weaker result cannot influence later analyses.
+
+**Trade-offs**
+The fallback cannot check domain age, so a very new sender domain without other warning signs can be rated likely safe in fallback mode. It also cannot judge the wording of an email.
 
 ---
 
-## Testing approach for the agent, model client and service 
+## Decision 14 - Three configurations for the evaluation
 
-All tests run without Ollama, network or database (`tests/fakes.py` provides a scripted model and fake tools). One test uses the real `ollama` library against a port where nothing is listening, so the "Ollama not running" path is tested for real.
+**Decision**
+The agent is compared with two baselines. In the configuration llm_only, the model decides from the email alone. In the configuration fixed_pipeline, every check runs on every email and the model then decides once. All three are Analyzer classes built by the same factory. They share the prompts, the verdict validation and the safety rules, and they run through the same AnalysisService as the app. The script evaluation/run_evaluation.py runs every case through every configuration. It reports precision, recall, F1, false positive rate, accuracy, latency, model calls, tool calls, fallbacks and invalid outputs.
 
-- **Model client** (`test_model_client.py`): reply extraction, settings sent to Ollama, each error type translated (404, server error, connection refused, timeout, broken connection), bugs not disguised as "Ollama down".
-- **Agent** (`test_agent.py`): normal run, finishing without tools, unknown tool, wrong or missing arguments, domain not in the email, repeated call, unavailable and crashing tools, step limit, refused calls using up steps, malformed JSON repaired and failing twice, invented evidence repaired and failing twice, prompt injection that cannot make an email safe, an email that tries to close its data block, no state between emails.
-- **Tool registry** (`test_tool_registry.py`): argument types, anyOf, allowed and refused domains and URLs, app-filled arguments, MCP and local tool sources.
-- **Validator and rules** (`test_verdict_validator.py`): every grounding rule, score bands, every safety rule, rules never lowering a verdict.
-- **Prompts and injection scan** (`test_prompts.py`): data blocks, truncation, missing headers, JSON extraction, injection patterns found (including in HTML comments) and normal emails not flagged.
-- **Service** (`test_ai_service.py`): empty, too large and non-email input rejected without a model call. Each model error switching to the fallback; database failure only adding a warning. Unexpected bug becoming `FAILED`.
-- **End-to-end** (`test_integration.py`): the real factory with Person 1's parser and email checks and Person 3's lookalike check; only the model is scripted. A real `.eml` case through the agent, all email checks offered to the model, Ollama down leading to the offline fallback with every offline check, a "safe" verdict overruled by a high-risk check, a pasted body without headers, and the parser's placeholder subject never used for campaign matching.
-- **Manual check with the real model:** `python -m scripts.try_agent evaluation/cases/*.eml` runs the full application on the evaluation emails and prints the verdict, evidence, warnings and trace.
+
+**Alternatives considered**
+Separate evaluation scripts with their own prompts would be faster to write, but differences in the results could then come from the prompts and not from the design. Evaluating only the agent would not show whether the agent is justified.
+
+
+**Why we chose this**
+Differences in the results come only from how evidence is collected. The shared base class ModelAnalyzer contains the run state, the model calls and the verdict request with repair. The agent and both baselines only implement how they gather evidence. Running through the service means that input checks, fallbacks and warnings are counted exactly as a user would experience them. Fallbacks are reported separately. The dataset sample uses a fixed seed and the temperature is 0. The online checks can be replayed from the cache, and the case history is not written during evaluation unless this is requested.
+
+
+**Trade-offs**
+A full run of all three configurations takes a long time on a computer without a graphics card. We therefore evaluate a sample of the Zenodo dataset and not all 2000 emails. A suspicious verdict counts as phishing by default, because the user is then warned. The option suspicious-as legitimate shows the stricter view.
+
+## Testing approach for the agent, model client and service (Elif)
+ 
+My part is tested on two levels. Automated tests check every rule of the agent without a model. Hand-crafted cases check how the real model behaves in the situations that are most risky for an AI analyser.
+ 
+### Automated tests
+ 
+All tests run with pytest and need neither Ollama, the network nor the database. A scripted fake model and fake tools are defined in tests/fakes.py, so every rule can be tested on its own and with exactly the model answer that is needed.
+ 
+The model client tests check the settings sent to Ollama and the translation of every error type into our own exceptions. One test uses the real Ollama library against a port where nothing is listening, so the case that Ollama is not running is tested for real.
+ 
+The agent tests cover a normal run, finishing without tools, unknown tools, wrong arguments, domains that are not in the email and repeated calls. They also cover unavailable and crashing tools and the step limit. Further tests check invalid JSON and invented evidence that are either corrected or fail twice. The last group checks that prompt injection cannot make an email safe and that an email cannot close its own data block.
+ 
+The registry, validator and prompt tests check the argument rules, every grounding rule, the score bands and every safety rule. The service tests check rejected input, every switch to the fallback and unexpected bugs. The integration tests use the real factory with the parser and email checks and the lookalike check. Only the model is scripted.
+ 
+### Hand-crafted cases
+ 
+ My twelve cases in evaluation/elif_test_cases.json therefore focus on the agent itself. They ask whether the model can be manipulated, whether it stays within its limits and whether it adds value where the tools find nothing.
+ 
+| Case | What it tests |
+|---|---|
+| elif-1 (19) | An instruction to the AI hidden in an HTML comment and an invisible block |
+| elif-02 (20)| A fake end of the data block followed by new instructions |
+| elif-03 (21) | A polite checklist that tries to waste the step budget on twelve unrelated domains |
+| elif-04 (22) | A legitimate course announcement about AI, as a false positive check for the injection scan |
+| elif-05 (23) | A legitimate password reset with alarming wording |
+| elif-06 (24) | A phishing body pasted without any headers |
+| elif-07 (25) | A gift card scam from a real colleague address without any link, which only the language analysis can detect |
+| elif-08 (26) | A phishing email in Finnish |
+| elif-09 (27) | A phishing link at the end of a long text that is cut off in the prompt |
+| elif-10 (28) | A fake security banner in the body that claims SPF and DKIM passed, while the real headers failed |
+| elif-11 (29) | Ollama not running or the model not installed |
+| elif-12 (30) | Invalid model output, unknown tools, foreign domains, invented evidence and invalid input |
+ 
+Cases elif-01 to elif-10 are emails in evaluation/cases and are run with the real model. Each entry contains grading rules in the same format as the cases of Person 3, together with the result of the offline fallback. Cases elif-11 and elif-12 are failure situations that are covered by automated tests, which are named in each entry.
+ 
+Two cases show limits on purpose. In elif-03 the checklist contains no typical injection phrase, so the pattern scan does not detect it, and only the step budget protects the agent. In elif-07 the offline fallback rates the email likely safe, because no tool finds anything and the fallback cannot judge language. This case shows why the language model is needed. The results of the runs are summarised in evaluation/evaluation_results.md.

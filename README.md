@@ -2,6 +2,8 @@
 
 Group project for the Development of AI Applications course (Autumn 2026).
 
+SpotThePhish is a local AI assistant that checks a single email for phishing. It explains its verdict with evidence that the application has verified, so the user can see why an email is dangerous instead of getting a bare yes or no.
+
 ## Team members
 
 - Elif Akpinar (amk1020345@student.hamk.fi)
@@ -40,9 +42,9 @@ The information needed to judge an email is spread across places that users rare
 - SPF, DKIM and DMARC authentication results
 - inconsistencies between the From, Reply-To and Return-Path headers
 - differences between the displayed link text and the actual link destination
-- suspicious or newly registered domains
-- suspicious attachment names and extensions
-- external reputation information about URLs and domains
+- lookalike or newly registered domains
+- dangerous attachment names and extensions
+- external reputation information about links
 
 Conventional email filters run such checks automatically, but they give little or no explanation for their decisions and some phishing messages still get through.
 At that point, a person has to make the decision.
@@ -55,18 +57,20 @@ Phishing analysis combines technical and linguistic analysis.
 SpotThePhish therefore combines an LLM with deterministic processing instead of relying on the language model alone.
 
 #### Email analysis stays deterministic
-Attributes such as From, To, Reply-To, Subject, URLs, attachments and authentication results are extracted into a defined data schema and analysed with deterministic code.
-For example, From and Reply-To can be compared directly, URLs can be inspected for suspicious characters and domains can be checked against external or stored information.
+Attributes such as From, Reply-To, Subject, links, attachments and authentication results are extracted into a defined data schema and analysed with deterministic code.
+For example, From and Reply-To can be compared directly, links can be inspected for hidden targets and domains can be checked against a brand list, RDAP or earlier verdicts.
 These results are facts, not guesses.
 
 #### Adaptive analysis
 Different emails require different checks.
-A message with a suspicious link needs URL and domain analysis, while an urgent payment request needs sender and authentication analysis.
+A message with a suspicious link needs link and domain analysis, while an urgent payment request needs sender and authentication analysis.
 The model looks at the email and the results so far and decides which checks are relevant, so not every check has to run on every email.
 
 #### Language and interpretation
 Phishing relies on social engineering such as urgency, authority, threats and requests for credentials or payment.
-These patterns are phrased differently in every email and cannot be captured reliably with fixed keyword rules, but an LLM can recognise them. The LLM also combines the technical findings with its language analysis and explains the result in plain language, because raw security results are not understandable to non-specialist users.
+These patterns are phrased differently in every email and cannot be captured reliably with fixed keyword rules, but an LLM can recognise them.
+Some scams contain no technical indicator at all, for example a gift card request from a hacked colleague account. Only the language analysis can detect them.
+The LLM also combines the technical findings with its language analysis and explains the result in plain language, because raw security results are not understandable to non-specialist users.
 
 ## Solution
 
@@ -75,12 +79,13 @@ The application then returns:
 
 - a verdict: phishing, suspicious or likely safe
 - a risk score from 0 to 100
-- a list of evidence items, each linked to the check that produced it
+- a list of evidence items, each linked to the check that produced it or to an exact quote from the email
 - a plain-language explanation and a recommended action
+- warnings, for example when a check could not run or the email had no headers
 - the full investigation trace, showing which checks were run and why
 
 The model proposes the next action and the final assessment.
-The application code controls which tools exist, validates every tool call, limits the number of steps and applies safety rules that the model cannot override.
+The application code controls which tools exist, validates every tool call, limits the number of steps, checks every piece of evidence and applies safety rules that the model cannot override.
 
 ### Scope
 
@@ -88,7 +93,8 @@ The application code controls which tools exist, validates every tool call, limi
 - Analysis of a single email (pasted raw text or `.eml` upload), mainly in English.
 - Read-only security checks. No links are opened in a browser and no attachments are executed.
 - Explained verdict with evidence and investigation trace.
-- Evaluation on public phishing and legitimate email datasets.
+- Detection of prompt injection, meaning text inside the email that tries to instruct the AI.
+- Evaluation on a public labelled dataset and on hand-crafted test emails.
 
 **Out of scope**
 - Mailbox integration or automatic actions such as deleting, blocking or reporting emails.
@@ -98,16 +104,19 @@ The application code controls which tools exist, validates every tool call, limi
 ## Main user workflow
 
 1. **User input:** The user pastes an email or uploads an `.eml` file in the Gradio interface.
-2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input, then deterministically parses sender, reply-to, return-path, authentication headers, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
-3. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the observation to the investigation state. This repeats until the model finishes or the step limit (6 tool calls) is reached.
-4. **Verdict validation:** The model's final report is validated against a Pydantic schema. Every evidence item must reference an actual tool observation, and deterministic rules enforce minimum risk levels (for example, a URL listed as malicious by a reputation service always results in phishing).
-5. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation and investigation trace. The validated verdict is stored in the local case history.
+2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input before any model call. The email parser then extracts sender, reply-to, return-path, authentication results, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
+3. **Prompt injection scan:** Before the model sees the email, a deterministic scan looks for instructions aimed at AI tools, also in hidden HTML. Its result is always the first observation.
+4. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the result as a numbered observation. This repeats until the model finishes or the budget of 6 steps is used up.
+5. **Verdict validation:** The model's final report must match a fixed schema. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
+6. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation, warnings and investigation trace. A fingerprint of the validated verdict is stored in the case history.
 
-If the model fails (invalid output, timeout, Ollama unavailable), the application falls back to a fixed pipeline that runs all offline checks and shows a rule-based result, clearly labelled as a fallback.
+If the model fails (Ollama not running, model not installed, timeout or output that stays invalid after one correction), the application switches to an offline analysis. It runs every check that needs neither the model nor the network and shows a rule-based result that is clearly labelled as a fallback.
 
 ## Architecture
 
-Details are in [`docs/architecture.md`](docs/architecture.md).
+The full description with diagrams is in [`docs/architecture.md`](docs/architecture.md). The reasons behind each design choice are in [`docs/project-decisions.md`](docs/project-decisions.md).
+
+![Components and layers](docs/images/1-components.png)
 
 ```text
 User
@@ -116,7 +125,8 @@ Gradio UI (app/ui.py)
   ↓ analyze_email(text) -> verdict, evidence, explanation, warnings, investigation trace
 Application Service (src/services/ai_service.py)
   | → Email Parser (src/email_parser.py): deterministic parsing
-  | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 tool calls
+  | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 steps
+  |    → Prompt Injection Scan (src/capabilities/injection_scan.py): always observation 1
   |    → Tool Registry (src/capabilities/tool_registry.py): validates every tool call
   |       - email checks, in-process (src/capabilities/tools.py):
   |           check_email_authentication, analyze_links, inspect_attachments
@@ -124,30 +134,31 @@ Application Service (src/services/ai_service.py)
   |           check_lookalike_domain, check_domain_age, check_url_reputation, lookup_case_history
   |    → Verdict Validator (src/capabilities/verdict_validator.py): evidence grounding
   |    → Verdict Policy (src/capabilities/verdict_policy.py): score bands, safety rules
+  |    → Model Client (src/models/model_client.py) → Ollama (local) → qwen2.5:3b
   | → Offline Fallback (src/capabilities/offline_analyzer.py): used when the model fails
   | → Case History (src/capabilities/memory.py): PostgreSQL, fingerprints only
-  ↓
-Model Client (src/models/model_client.py)
-  ↓
-Ollama (local LLM server) -> qwen3:8b
+  ↑ all objects are created and connected in src/services/service_factory.py
 ```
 
 > **Core Architectural Rule:** The user interface must NEVER communicate directly with the model client or Ollama. All interactions must pass through the service layer (`ai_service.py`).
 
 - **UI isolation:** The UI only calls the service layer, which handles orchestration.
-- **The application owns execution:** The model can only propose actions from a fixed list of read-only tools. Arguments are validated before execution, and invalid requests are rejected and reported back to the model as an observation.
-- **Email content is untrusted data:** Emails are passed to the model in delimited data blocks. Instructions inside an email are treated as a phishing signal, not as instructions.
+- **The application owns execution:** The model can only propose actions from a fixed list of read-only tools. Arguments are validated before execution, and a domain or link may only be checked if it appears in the email. Invalid requests are rejected and reported back to the model as an observation.
+- **Email content is untrusted data:** Emails are passed to the model in data blocks with a random boundary per run, so an email cannot close its own block. Instructions inside an email are treated as a phishing signal, not as instructions.
+- **Verified evidence only:** The user only sees evidence that points to a real check or to text that is really in the email.
 - **Safe by design:** No tool opens a URL in a browser, downloads a page or executes an attachment.
-- **External APIs are optional:** If an API key is missing or a service is down, the tool returns "unavailable", the agent continues with the remaining evidence and the UI states which checks could not be run.
+- **Graceful degradation:** If an API key is missing or a service is down, the tool returns "unavailable", the agent continues with the remaining evidence and the UI states which checks could not be run. If the model is not available, the offline fallback takes over.
 
 ## Model
 
-- **Model used:** `qwen3:8b`, running locally through Ollama (fallback for weaker hardware: `qwen3:4b`)
+- **Model used:** `qwen2.5:3b`, running locally through Ollama. `qwen3:8b` can be used instead by changing `MODEL_NAME`, without any code change.
+- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 60 seconds. Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes, and the larger model did not change the results much in our tests.
 - **Selection rationale:**
   - **Privacy:** Emails may contain personal and confidential data. Running the model locally through Ollama keeps the email and its analysis on the user's machine instead of sending them to a third-party LLM API.
-  - **Tool calling and structured output:** The agent loop depends on reliable JSON actions and a schema-conformant final report. Qwen3 supports tool calling and structured output in Ollama.
-  - **Reasoning capacity:** The agent must combine several pieces of evidence rather than classify an email in one step. The 8B model offers more capacity for this than smaller models while still running on typical laptops with 16 GB RAM.
-  - **Configurability:** The model is set through environment variables, so `qwen3:8b` and `qwen3:4b` can be compared without changing the application.
+  - **Structured output:** The agent loop depends on reliable JSON decisions and a schema-conformant final report. Qwen3 supports structured output in Ollama, and the schema even limits the model to the real tool names.
+  - **Small and fast:** The 3B model runs on a normal laptop with 8 GB RAM and answers fast enough for an interactive tool. The facts come from the tools, so the model mainly has to choose checks, read the language of the email and explain the result.
+  - **Configurability:** The model is set through environment variables, so `qwen2.5:3b` and `qwen3:8b` can be compared without changing the application.
+- **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in `.env` (see Decision 9).
 
 ## Additional AI capability
 
@@ -164,6 +175,7 @@ Ollama (local LLM server) -> qwen3:8b
 #### Tools
 An LLM alone cannot know whether a domain was registered yesterday, whether DKIM verification failed or whether a URL is on a blocklist. It would guess, and a guessed security verdict is dangerous.
 The tools provide verifiable facts, and the model's job is to interpret and explain them.
+SpotThePhish has seven read-only tools. Three of them check the email itself (authentication, links, attachments). Four of them check domains and history (lookalike domains, domain age via RDAP, link reputation via Google Safe Browsing, case history).
 
 #### Agent
 Phishing emails attack in different ways. Some rely on a malicious link, some on a fake sender identity and some on a dangerous attachment.
@@ -174,18 +186,16 @@ Which checks are useful therefore cannot be decided in advance:
 
 A fixed workflow would run every check on every email. This is slower, sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
 
-This claim will be tested: the evaluation compares the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
+The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
 
 #### Model Context Protocol (MCP)
-The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The agent discovers them via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
+The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The application starts the server once, discovers the tools via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
 
 #### Memory / persistent state
-Phishing arrives in campaigns. SpotThePhish stores a fingerprint of every validated verdict in PostgreSQL (sender domain, link domains, a hash of the normalised subject, verdict, risk score, date) and never the email body. The agent can query it with `lookup_case_history`. A match is evidence, not an automatic answer. See [Decision 5](docs/project-decisions.md).
-The agent can query it with the `lookup_case_history` tool: if the same sender domain, link domain or subject pattern was already judged phishing, the agent can finish with fewer checks and the result tells the user that this is a known campaign.
-
-The history only stores what is needed for matching (domains, subject fingerprint, verdict, timestamp), not full email bodies.
-A previous verdict is treated as evidence, not as an automatic answer, so a wrong earlier result cannot silently repeat itself.
-This capability is built after the agent core works, so it cannot endanger the beta milestone.
+Phishing arrives in campaigns. SpotThePhish stores a fingerprint of every validated verdict in PostgreSQL (sender domain, link domains, a hash of the normalised subject, verdict, risk score, date) and never the email body.
+The agent can query it with the `lookup_case_history` tool. If the same sender domain, link domain or subject pattern was already judged phishing, the result tells the user that this is a known campaign.
+The subject is normalised before hashing, so "Parcel 8841 could not be delivered" and "RE: Parcel 5530 could not be delivered" are recognised as the same campaign.
+A previous verdict is treated as evidence, not as an automatic answer, so a wrong earlier result cannot silently repeat itself. Fallback verdicts are not stored. See [Decision 5](docs/project-decisions.md).
 
 #### Why not RAG
 The needed knowledge is not in a document collection. It comes from the email itself and from live checks, so tools are the appropriate capability.
@@ -221,7 +231,7 @@ copy .env.example .env
 Ensure `.env` contains valid values for `OLLAMA_BASE_URL` and `MODEL_NAME`:
 ```env
 OLLAMA_BASE_URL=http://localhost:11434
-MODEL_NAME=qwen3:8b
+MODEL_NAME=qwen2.5:3b
 ```
 
 Never commit `.env`. It is already excluded by `.gitignore`.
@@ -231,10 +241,10 @@ Never commit `.env`. It is already excluded by `.gitignore`.
 Make sure Ollama is installed and running locally, then pull the model:
 
 ```bash
-ollama pull qwen3:8b
+ollama pull qwen2.5:3b
 ```
 
-On computers with less memory, use `qwen3:4b` and set `MODEL_NAME=qwen3:4b` in `.env`.
+To use the larger model, run `ollama pull qwen3:8b` and set `MODEL_NAME=qwen3:8b` in `.env`. It needs about 16 GB RAM and is about three times slower without a graphics card.
 
 ### 5. Start PostgreSQL
 
@@ -246,9 +256,9 @@ docker compose up -d
 
 This creates the databases `spotthephish`, `spotthephish_eval` and `spotthephish_test`. If you already had a volume from an older version, run `docker compose down -v` once before starting.
 
-Optional: put a Google Safe Browsing key into `.env` (`SAFE_BROWSING_API_KEY`) to enable the URL reputation check. Without a key the check reports "unavailable" and the analysis continues. Never commit `.env`.
+Optional: put your own Google Safe Browsing key into `.env` (`SAFE_BROWSING_API_KEY`) to enable the link reputation check. Without a key the check reports "unavailable" and the analysis continues. Never commit or share the key.
 
-The domain tool server (MCP) is started automatically by the application; you do not need to start it yourself.
+The domain tool server (MCP) is started automatically by the application. You do not need to start it yourself.
 
 ### 6. Run the application
 
@@ -260,38 +270,45 @@ python -m app.main
 
 Then open your browser at `http://localhost:7860`.
 
+To analyse `.eml` files from the command line without the UI, run:
+
+```bash
+python -m scripts.try_agent "evaluation/cases/*.eml"
+```
+
+It prints the verdict, evidence, warnings and the full trace for each file.
+
 ### 7. Run automated tests
 
 ```bash
 pytest -rs
 ```
 
-Tests that need the database use the separate database from `TEST_DATABASE_URL` (see `.env.example`). If it is not reachable or the variable is missing, those tests are skipped and `-rs` shows the reason.
+The tests need neither Ollama nor the network, because the model is replaced by a scripted fake model. Tests that need the database use the separate database from `TEST_DATABASE_URL` (see `.env.example`). If it is not reachable or the variable is missing, those tests are skipped and `-rs` shows the reason.
 
 ## Evaluation
-This section describes the planned methodology. Results will be added to [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
+The results are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md). How to run the evaluation is described in [`evaluation/README.md`](evaluation/README.md).
 
 The evaluation answers three questions:
 
-1. **Does SpotThePhish detect phishing reliably?** Precision, recall, F1 and false positive rate on a labelled dataset.
+1. **Does SpotThePhish detect phishing reliably?** Precision, recall, F1 and false positive rate on labelled emails.
 2. **Is the agent justified?** Three configurations are compared on the same emails.
 3. **Does it behave safely in difficult and failure situations?** Test cases with expected behaviour, recorded as pass, partial or fail.
 
 ### Dataset
-The evaluation uses three data sources, because each one covers a different part of the application:
+The evaluation uses two data sources, because each one covers a different part of the application:
 
 | Source | Content | Used to evaluate |
 |---|---|---|
-| [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 labelled emails, text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Nazario phishing corpus and SpamAssassin public corpus (raw emails) | Real phishing emails (Nazario) and legitimate emails (SpamAssassin) with sender, receiver, subject, body and extracted URLs | Sender and link checks on real emails, false positive rate on real legitimate mail |
-| Hand-crafted `.eml` cases (planned) | About 20 modern attack examples written by the team, using fictional `.example` domains, with full headers and attachment metadata | Authentication and attachment checks, modern attack types, difficult and adversarial cases |
+| [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 28 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
-The validation dataset contains only email text, so it cannot test header, link or attachment checks. The raw corpora add real senders and links but no authentication headers or attachments, and many of their domains no longer exist. The hand-crafted cases cover the remaining checks. 
-Reputation and domain-age results change over time, so tool responses for the evaluation set are cached and stored with the results.
+The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
+The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
+Reputation and domain-age results change over time, so the results of the online checks are stored in an evaluation cache and replayed. For the fictional domains they are seeded on purpose (see Decision 8).
 
-The raw datasets contain real names and email addresses, so they are kept locally in `data/raw/` and excluded from the repository via `.gitignore`. 
-Dataset sources and licenses will be documented in [`data/README.md`](data/README.md). 
-No real personal emails are committed to the repository.
+Dataset sources and licenses are documented in [`data/README.md`](data/README.md).
+Raw datasets with real names and email addresses are kept locally in `data/raw/` and excluded from the repository via `.gitignore`. No real personal emails are committed to the repository.
 
 ### Compared configurations
 
@@ -301,50 +318,56 @@ No real personal emails are committed to the repository.
 | Fixed pipeline | All tools run on every email, then the model writes the verdict |
 | Agent (SpotThePhish) | The model selects the checks step by step and stops when the evidence is clear |
 
+All three use the same prompts, the same verdict validation and the same safety rules, so differences in the results only come from how the evidence is collected.
+
 ### Metrics
 
 | Aspect | Measure |
 |---|---|
-| Detection quality | Precision, recall, F1 and false positive rate for phishing |
-| Efficiency | Average tool calls and latency per email |
-| Evidence grounding | Share of evidence items that match an actual tool observation (manual check on 30 results) |
-| Explanation quality | Manual rating (clear, correct, actionable) on a sample of results |
-| Case history | For repeated campaign emails: correct match rate and reduction in tool calls compared with the first report |
+| Detection quality | Precision, recall, F1, false positive rate and accuracy for phishing |
+| Efficiency | Average latency, model calls and tool calls per email |
+| Reliability | Number of fallbacks and invalid model outputs |
+| Evidence grounding | Checked automatically for every evidence item: it must cite a check that ran or quote the email word for word |
+| Case history | For the repeated campaign case: whether the earlier verdict is recognised |
 
-A false negative (phishing classified as safe) is the most harmful error, so **recall on phishing is the primary metric**.
+A false negative (phishing classified as safe) is the most harmful error, so recall on phishing is the primary metric. A suspicious verdict counts as phishing by default, because the user is then warned.
 
 ### Test cases
 
-Behaviour-focused test cases will be added to [`evaluation/test_cases.json`](evaluation/test_cases.json) during development. They are planned in three categories:
+There are 33 behaviour-focused test cases with 28 emails, listed in [`evaluation/p3_test_cases.json`](evaluation/p3_test_cases.json) and [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json). They cover three categories:
 
-- **Successful cases:** typical phishing types (credential link, CEO fraud, malicious attachment) and a normal legitimate email.
-- **Difficult cases:** alarming but legitimate emails (real password resets), phishing from compromised legitimate accounts, emails without headers, non-English emails.
-- **Failure and adversarial cases:** prompt injection inside the email, empty input, non-email text, Ollama not running, missing API key, invalid tool calls proposed by the model.
+- **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
+- **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails and a repeated campaign.
+- **Failure and adversarial cases:** prompt injection in visible text, hidden HTML, quoted replies and fake instruction blocks, a fake security banner, an attempt to waste the step budget, unavailable online services, Ollama not running, invalid model output and empty input.
 
-Each case will record the expected behaviour, the actual result and a status (pass, partial or fail).
+Each case records the expected behaviour, grading rules, the actual result and a status (pass, partial or fail). Failure cases that cannot be produced with an email, such as invalid model output, are covered by automated tests, which are named in each entry.
 
 ## Known limitations
 
-- The phishing validation dataset contains only email text and is partly artificially generated, so it cannot test header, link or attachment checks, and results on it may not fully reflect real emails.
-- Older public corpora contain many links and domains that no longer exist, so live reputation and domain-age checks cannot be evaluated on them. The hand-crafted cases partly compensate for this.
+- The phishing validation dataset contains only short texts and is partly artificially generated, so it cannot test header, link or attachment checks, and results on it may not fully reflect real emails.
+- The hand-crafted cases were written by the team. They test specific behaviour but are too few for strong statistical claims.
 - Emails pasted without headers cannot be checked for authentication results, which weakens the assessment.
 - Phishing sent from compromised legitimate accounts passes authentication and domain checks, so detection then depends mainly on the language analysis.
-- A local 8B model may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback pipeline limit the impact, but they do not eliminate errors.
-- The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate company that has the same name as a listed brand. Risk values and thresholds are initial, hand-chosen settings.
+- A small local model (3B) may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback limit the impact, but they do not eliminate errors.
+- On a computer without a graphics card, the model runs on the processor. One analysis takes about 60 seconds with `qwen2.5:3b` and around 3 minutes with `qwen3:8b` (not consistent).
+- The model only sees the first 6,000 characters of the body. The link and attachment checks still use the full email, but wording at the end of a very long email is not analysed by the model.
+- The prompt injection scan uses patterns for typical phrasings. An instruction without such phrases is not detected by the scan. In that case only the step budget, the argument checks and the safety rules protect the analysis.
+- The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk"). Risk values and thresholds are initial, hand-chosen settings.
 - Domain age relies on RDAP. Not every top-level domain publishes RDAP data, so a missing record is only a weak signal, and public RDAP servers can rate-limit requests.
 - The URL reputation check needs a Google Safe Browsing API key, which is free only for non-commercial use, and it sends the checked URL to Google. A URL that is not listed is not proven safe, and very new phishing pages may not be listed yet.
 - Online checks that cannot run (timeout, rate limit, missing key) are reported as "unavailable". They reduce the evidence, but the application does not retry automatically.
 - The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Verdicts from the offline fallback are not stored.
-- Evaluation results for online tools are recorded in a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions and say nothing about the accuracy of the live services.
+- Evaluation results for online tools come from a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions that say nothing about the accuracy of the live services.
 - The full application needs a running PostgreSQL instance (Docker) for the case history. Without it, only that capability is unavailable.
-- The offline fallback runs only checks that need no network. It cannot look up the age of a domain, so a very new, unknown sender domain without other warning signs can be rated "likely safe" in fallback mode.
-- The lookalike check can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk").
+- The offline fallback runs only checks that need no model and no network. It cannot look up the age of a domain and cannot judge the wording of an email, so a scam without technical indicators can be rated "likely safe" in fallback mode.
 
 ## Future improvements
 
 - Browser or mail-client extension for one-click analysis
 - Reporting system for IT support
 - Organisation-specific allowlists of known senders, built on the case history
+- Better support for non-English emails and a larger, regularly updated brand list
+- A small trained classifier for prompt injection in addition to the pattern scan
 
 ## Presentation video
 
