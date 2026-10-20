@@ -1,0 +1,29 @@
+From: Course Coordinator <course-coordinator@lecture-notes.example>
+To: student@hamk-test.example
+Subject: Lecture schedule for next week
+Date: Fri, 16 Oct 2026 08:00:00 +0000
+Message-ID: <p3-13@lecture-notes.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="testboundary13"
+
+--testboundary13
+Content-Type: text/plain; charset="utf-8"
+
+Hello,
+
+Attached is the lecture schedule for next week.
+No action is required.
+
+Please contact the course coordinator if you have questions.
+
+Best regards,
+Course Coordinator
+
+--testboundary13
+Content-Type: application/pdf; name="Lecture_Schedule.pdf"
+Content-Disposition: attachment; filename="Lecture_Schedule.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJVRFU1QgTk9UIEEgUkVBTCBQREY=
+
+--testboundary13--

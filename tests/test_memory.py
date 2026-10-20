@@ -101,3 +101,10 @@ def test_history_ignores_ip_links_and_bad_sender(db):
     memory.save_verdict(_email(), _verdict())
     r = t.lookup_case_history("not a domain", ["192.168.10.5", "evil-pay.com"], "other subject")
     assert r.status in ("success", "warning") and r.details["matches"] == 1
+
+def test_campaign_match_with_subdomains(db):
+    memory.save_verdict(
+        _email(subject="Parcel 8841 not delivered", sender="mail.parcel-notice.example", links=("login.parcel-notice.example",)),
+        _verdict())
+    r = t.lookup_case_history("parcel-notice.example", ["parcel-notice.example"], "Something else")
+    assert r.status == "warning" and r.details["matches"] == 1

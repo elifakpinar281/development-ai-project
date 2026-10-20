@@ -11,7 +11,7 @@ CASES_DIR = PROJECT_ROOT / "evaluation" / "cases"
 def test_tool_auth_legit_email():
     """Legitimate email should pass SPF, DKIM, DMARC and have low risk."""
 
-    email_data = parse_email(CASES_DIR / "p1-01-legit-hamk.eml")
+    email_data = parse_email(CASES_DIR / "29-legit-hamk.eml")
     result = check_email_authentication(email_data)
     assert result.status == "success"
     assert result.risk_score < 20.0
@@ -20,7 +20,7 @@ def test_tool_auth_legit_email():
 def test_tool_auth_spoofing_detection():
     """Spoofed helpdesk display name and failed SPF should trigger warning."""
 
-    email_data = parse_email(CASES_DIR / "p1-02-auth-spoof-moodle.eml")
+    email_data = parse_email(CASES_DIR / "30-auth-spoof-moodle.eml")
     result = check_email_authentication(email_data)
     assert result.status == "warning"
     assert result.risk_score >= 70.0
@@ -29,7 +29,7 @@ def test_tool_auth_spoofing_detection():
 def test_tool_attachment_double_extension():
     """Double extension must be caught by metadata inspection."""
 
-    email_data = parse_email(CASES_DIR / "p1-03-attachment-double-ext.eml")
+    email_data = parse_email(CASES_DIR / "31-attachment-double-ext.eml")
     result = inspect_attachments(email_data)
     assert result.status == "warning"
     assert result.risk_score >= 90.0
@@ -38,7 +38,7 @@ def test_tool_attachment_double_extension():
 def test_tool_links_mismatch_punycode():
     """Deceptive anchor text and Punycode homographs must be flagged."""
 
-    email_data = parse_email(CASES_DIR / "p1-04-deceptive-links-punycode.eml")
+    email_data = parse_email(CASES_DIR / "32-deceptive-links-punycode.eml")
     result = analyze_links(email_data)
     assert result.status == "warning"
     assert result.risk_score >= 80.0
@@ -48,7 +48,7 @@ def test_tool_links_mismatch_punycode():
 def test_tool_headerless_raw_text():
     """Headerless raw pasted text returns warning on auth check and catches shorteners."""
 
-    email_data = parse_email(CASES_DIR / "p1-05-headerless-raw-body.txt")
+    email_data = parse_email(CASES_DIR / "33-headerless-raw-body.eml")
     auth_res = check_email_authentication(email_data)
     assert auth_res.status == "warning"
     assert not email_data.has_headers
@@ -58,7 +58,7 @@ def test_tool_headerless_raw_text():
 def test_offline_fallback_verdict():
     """Offline fallback should produce valid Verdict objects."""
 
-    email_data = parse_email(CASES_DIR / "p1-03-attachment-double-ext.eml")
+    email_data = parse_email(CASES_DIR / "31-attachment-double-ext.eml")
     verdict = run_offline_fallback(email_data)
     assert verdict.is_fallback is True
     assert verdict.verdict == "phishing"

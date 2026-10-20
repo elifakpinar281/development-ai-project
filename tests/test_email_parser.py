@@ -38,6 +38,6 @@ def test_pasted_path_is_not_read_as_file():
 
 
 def test_eml_path_and_path_object_still_work():
-    case = PROJECT_ROOT / "evaluation" / "cases" / "p3-01-lookalike-paypal.eml"
+    case = PROJECT_ROOT / "evaluation" / "cases" / "01-lookalike-paypal.eml"
     assert parse_email(case).sender.domain == "paypa1.example"
     assert parse_email(str(case)).sender.domain == "paypa1.example"

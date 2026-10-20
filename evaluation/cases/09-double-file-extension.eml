@@ -1,0 +1,23 @@
+From: Shipping Office <documents@shipment-tracking.example>
+To: staff1@hamk-test.example
+Subject: Delivery receipt - please open
+Date: Thu, 15 Oct 2026 11:30:00 +0000
+Message-ID: <p3-09@shipment-tracking.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="testboundary09"
+
+--testboundary09
+Content-Type: text/plain; charset="utf-8"
+
+Attached is your delivery receipt.
+Open the file to confirm receipt of the shipment.
+
+--testboundary09
+Content-Type: application/octet-stream; name="Delivery_Receipt.pdf.exe"
+Content-Disposition: attachment;
+ filename="Delivery_Receipt.pdf.exe"
+Content-Transfer-Encoding: base64
+
+UEhJU0hJTkdfVEVTVF9BVFRBQ0hNRU5UX05PVF9FWEVDVVRBQkxF
+
+--testboundary09--

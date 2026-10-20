@@ -9,8 +9,11 @@ import psycopg
 from psycopg.rows import dict_row
 
 from src.config import config
-from src.exceptions import DatabaseUnavailableError
+from src.exceptions import DatabaseUnavailableError, InvalidDomainError
 from src.schemas.responses import ParsedEmail, Verdict
+
+from src.capabilities.known_domains import KNOWN_BRANDS
+
 
 
 SCHEMA = """
@@ -95,15 +98,21 @@ def subject_fingerprint(subject: str) -> str:
     ).hexdigest()
 
 
+def _registrable(value: str) -> str:
+    from src.capabilities.domain_tools import normalize_domain #imported here because domain_tools imports this module
+
+    try:
+        return normalize_domain(value)
+    except InvalidDomainError:
+        return ""
+
+
 def fingerprint(parsed: ParsedEmail) -> dict:
-    links = sorted({
-        link.domain.lower()
-        for link in parsed.links
-        if link.domain
-    })
+    links = {_registrable(link.domain or link.url) for link in parsed.links}
+    links = sorted(domain for domain in links if domain and domain not in KNOWN_BRANDS)
 
     return {
-        "sender_domain": (parsed.sender.domain or "").lower(),
+        "sender_domain": _registrable(parsed.sender.domain or parsed.sender.address),
         "link_domains": links,
         "subject_hash": subject_fingerprint(parsed.subject or ""),
     }
