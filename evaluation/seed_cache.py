@@ -21,6 +21,8 @@ DOMAIN_AGES = {
     "hamk.fi": 9000,
     "parcel-hub-notice.example": 1,
     "xn--pypal-4ve.example": 2,
+    "hamk-test.example": 3000,
+    "company-test.example": 3000,
 }
 MALICIOUS_URLS = {"http://paypa1.example/verify"}
 CLEAN_URLS = {

@@ -15,6 +15,11 @@ from src.config import config
 from src.exceptions import (InvalidDomainError, InvalidToolInputError, InvalidUrlError, MissingApiKeyError, RateLimitError, ServiceResponseError, ServiceTimeoutError,)
 from src.schemas.responses import ToolResult
 
+import logging
+
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).setLevel(logging.WARNING)
+
 _TLD = tldextract.TLDExtract(suffix_list_urls=())
 _RESERVED_TLDS = {"example", "test", "invalid", "localhost"}
 _DOMAIN_RE = re.compile(
@@ -84,6 +89,20 @@ def normalize_domain(value: str) -> str:
 
 def require_domain(value: str) -> str:
     return normalize_domain(value)
+
+def _clean_host(value: str) -> str:
+    value = value.strip().lower()
+    if "@" in value and "://" not in value:
+        value = value.rsplit("@", 1)[-1]
+    if "://" in value:
+        value = urlsplit(value).hostname or ""
+    value = value.split("/", 1)[0].rstrip(".")
+    if value.count(":") == 1:
+        value = value.rsplit(":", 1)[0]
+    try:
+        return value.encode("idna").decode("ascii")
+    except UnicodeError:
+        return ""
 
 
 def require_url(value: str) -> str:
@@ -173,8 +192,12 @@ def _brand_labels() -> list[tuple[str, str]]:
 
 @tool_boundary("check_lookalike_domain", offline=True)
 def check_lookalike_domain(domain: str) -> ToolResult:
+    raw = domain
     domain = require_domain(domain)
     labels = domain.split(".")
+    host = _clean_host(raw)
+    subdomains = host[: -len(domain)].rstrip(".") if host.endswith(domain) else ""
+    subdomain_forms = {subdomains, _to_unicode(subdomains).translate(_CONFUSABLES)} if subdomains else set()
 
     if domain in KNOWN_BRANDS:
         return ToolResult(
@@ -213,7 +236,7 @@ def check_lookalike_domain(domain: str) -> ToolResult:
             for label in {registrable_label, normalized_label}:
                 if (len(brand_label) >= MIN_BRAND_LABEL_EMBEDDED
                         and brand_label in label and 70 > candidate_risk):
-                    candidate_risk = 70
+                    candidate_risk = 60
                     candidate_type = "brand_embedded"
                 if (len(brand_label) >= MIN_BRAND_LABEL_FUZZY
                         and len(label) >= MIN_BRAND_LABEL_FUZZY):
@@ -224,6 +247,14 @@ def check_lookalike_domain(domain: str) -> ToolResult:
                     elif distance == 2 and 65 > candidate_risk:
                         candidate_risk = 65
                         candidate_type = "edit_distance_2"
+
+        if subdomain_forms and candidate_risk < 80 and len(brand_label) >= 3:
+            for form in subdomain_forms:
+                tokens = set(re.split(r"[.\-]", form))
+                if brand_label in tokens or brand in form:
+                    candidate_risk = 80
+                    candidate_type = "brand_in_subdomain"
+                    break
 
         if candidate_risk > risk_score:
             risk_score = candidate_risk
@@ -237,7 +268,7 @@ def check_lookalike_domain(domain: str) -> ToolResult:
             "This is a similarity signal, not proof of phishing."
         )
         evidence = [
-            f"Submitted domain: {domain}",
+            f"Submitted domain: {host if match_type == 'brand_in_subdomain' else domain}",
             f"Similar known domain: {best_brand}",
             f"Similarity rule: {match_type}",
         ]
@@ -253,6 +284,7 @@ def check_lookalike_domain(domain: str) -> ToolResult:
         evidence=evidence,
         details={
             "domain": domain,
+            "host": host,
             "matched_brand": best_brand,
             "match_type": match_type,
             "edit_distance": best_distance,
@@ -396,7 +428,7 @@ def _lookup_reputation(url: str) -> ToolResult:
     try:
         response = httpx.post(
             endpoint,
-            params={"key": api_key},
+            headers={"x-goog-api-key": api_key},
             json=payload,
             timeout=config.http_timeout,
         )
@@ -494,6 +526,8 @@ def lookup_case_history(
                 normalized_links.append(require_domain(value))
             except InvalidDomainError:
                 continue
+
+    normalized_sender = memory.matchable_sender(normalized_sender)
 
     normalized_links = sorted({
         domain

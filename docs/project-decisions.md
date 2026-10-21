@@ -220,7 +220,7 @@ The two online tools (domain age and URL reputation) can run in three modes, set
   - Memory: campaign match through a subject variant, ignored brand links, fallback verdicts not stored, writing can be disabled, controlled error if the database is down.
   - Evaluation cache: record, then replay, cache miss, seeding.
   - MCP: the server lists exactly the four tools, the write function is not exposed, the synchronous client works and unknown tools are rejected.
-- **Hand-crafted evaluation cases:** Five emails with six cases (`evaluation/martina_test_cases.json`): two lookalike domains, one newly registered domain, a repeated campaign (first report and repeat) and one failure case with unavailable online checks. [TODO: record actual results and status per case.]
+  - **Hand-crafted evaluation cases:** 21 cases in `evaluation/martina_test_cases.json` (12 `martina-*` cases for domain checks and case history, 9 `case-*` cases for attachments, prompt injection and fraud). Graders are code-based and critical cases are reported separately. Results: `evaluation/evaluation_results.md`.
 
 
 ---

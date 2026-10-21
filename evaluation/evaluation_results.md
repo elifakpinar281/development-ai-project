@@ -31,7 +31,7 @@
 
 ### Domain checks and case history (Martina)
 
-**Setup:** Evaluation database `spotthephish_eval`, `EVAL_CACHE_MODE=replay`, with cache and case history reset before every trial using `python -m evaluation.run_p3_eval`. Model: `qwen2.5:3b` (Ollama), commit `0bd105f`, 3 runs per case, evaluation date `2026-10-20`. Grading is code-based and covers verdicts, risk ranges, tool observations, history rows, and error leakage. Critical cases are reported separately.
+**Setup:** Evaluation database `spotthephish_eval`, `EVAL_CACHE_MODE=replay`, with cache and case history reset before every trial using `python -m evaluation.run_martina_eval`. Model: `qwen2.5:3b` (Ollama), commit `0bd105f`, 3 runs per case, evaluation date `2026-10-20`. Grading is code-based and covers verdicts, risk ranges, tool observations, history rows, and error leakage. Critical cases are reported separately.
 
 **Agent with model**
 
@@ -79,7 +79,7 @@ Model: `qwen2.5:3b` | Commit: `0bd105f` | Date: `2026-10-20` | Runs per case: 3 
 **Key findings**
 
 - **What worked:** The agent successfully detected several lookalike-domain and phishing cases, including `case-08`, `case-09`, and `case-14`. Language analysis also helped identify payment fraud and suspicious attachment scenarios that the offline fallback missed. Tool-assisted checks provide useful capabilities beyond static rules.
-- **Failure modes:** (1) The critical case `martina-01` passed only 1 of 3 model runs and failed the minimum-risk and expected tool-observation checks. (2) The critical campaign-repeat case `p3-05` failed the expected case-history checks. (3) Domain-age observations and evidence were inconsistent in `p3-03` and `p3-04`. (4) The offline fallback missed new-domain phishing and payment fraud. (5) The brand heuristic produced a false positive for `p3-12`.
+- **Failure modes:** (1) The critical case `martina-01` passed only 1 of 3 model runs and failed the minimum-risk and expected tool-observation checks. (2) The critical campaign-repeat case `martina-05` failed the expected case-history checks. (3) Domain-age observations and evidence were inconsistent in `martina-03` and `martina-04`. (4) The offline fallback missed new-domain phishing and payment fraud. (5) The brand heuristic produced a false positive for `martina-12`.
 - **Model availability:** A total of 28 of 63 trials used the offline fallback instead of the AI model. This limits the conclusions that can be drawn about model performance and should be investigated separately.
 - **Campaign repeat:** Median tool calls were 2 for `martina-05`, compared with 3 for `martina-04`. The expected case-history lookup was not reliably observed in the repeat case.
 

@@ -334,7 +334,7 @@ A false negative (phishing classified as safe) is the most harmful error, so rec
 
 ### Test cases
 
-There are 33 behaviour-focused test cases with 28 emails, listed in [`evaluation/p3_test_cases.json`](evaluation/p3_test_cases.json) and [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json). They cover three categories:
+There are 33 behaviour-focused test cases with 28 emails, listed in [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) and [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json). They cover three categories:
 
 - **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
 - **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails and a repeated campaign.

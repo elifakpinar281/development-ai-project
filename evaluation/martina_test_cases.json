@@ -22,7 +22,7 @@
         ]
       ]
     },
-    "actual_result": "1/3 runs passed. Verdicts: phishing. Median tool calls: 3. Failed checks: min_risk, observed:check_lookalike_domain=warning, observed:check_url_reputation=warning.",
+    "actual_result": "1/2 runs passed. Verdicts: phishing. Median tool calls: 3.5. Failed checks: observed:check_lookalike_domain=warning.",
     "status": "partial"
   },
   {
@@ -48,8 +48,8 @@
         ]
       ]
     },
-    "actual_result": "0/1 runs passed. Verdicts: phishing. Median tool calls: 4. Failed checks: observed:check_lookalike_domain=warning.",
-    "status": "fail"
+    "actual_result": "2/3 runs passed. Verdicts: phishing. Median tool calls: 5. Failed checks: observed:check_lookalike_domain=warning.",
+    "status": "partial"
   },
   {
     "id": "martina-03",
@@ -72,8 +72,8 @@
         "check_domain_age"
       ]
     },
-    "actual_result": "0/2 runs passed. Verdicts: likely safe, phishing. Median tool calls: 2.5. Failed checks: evidence_cites:check_domain_age, observed:check_domain_age=warning, verdict_in.",
-    "status": "fail"
+    "actual_result": "2/2 runs passed. Verdicts: phishing, suspicious. Median tool calls: 5.0. ",
+    "status": "pass"
   },
   {
     "id": "martina-04",
@@ -94,8 +94,8 @@
       ],
       "expect_new_history_rows": 1
     },
-    "actual_result": "1/2 runs passed. Verdicts: phishing. Median tool calls: 3.0. Failed checks: observed:check_domain_age=warning.",
-    "status": "partial"
+    "actual_result": "0/1 runs passed. Verdicts: phishing. Median tool calls: 3. Failed checks: observed:check_domain_age=warning.",
+    "status": "fail"
   },
   {
     "id": "martina-05",
@@ -123,8 +123,8 @@
         "lookup_case_history"
       ]
     },
-    "actual_result": "0/1 runs passed. Verdicts: phishing. Median tool calls: 2. Failed checks: evidence_cites:lookup_case_history, observed:lookup_case_history=warning.",
-    "status": "fail"
+    "actual_result": "1/2 runs passed. Verdicts: phishing. Median tool calls: 3.5. Failed checks: evidence_cites:lookup_case_history.",
+    "status": "partial"
   },
   {
     "id": "martina-06",
@@ -142,8 +142,8 @@
         "Some checks could not run"
       ]
     },
-    "actual_result": "Not run with a model (fallback only).",
-    "status": "pending"
+    "actual_result": "0/1 runs passed. Verdicts: likely safe. Median tool calls: 1. Failed checks: unavailable:check_domain_age, warning:Some checks could not run.",
+    "status": "fail"
   },
   {
     "id": "martina-07",
@@ -155,7 +155,7 @@
     "grading": {
       "scenario": "db_down"
     },
-    "actual_result": "1/1 runs passed. Verdicts: likely safe. Median tool calls: 3. ",
+    "actual_result": "1/1 runs passed. Verdicts: likely safe. Median tool calls: 5. ",
     "status": "pass"
   },
   {
@@ -171,7 +171,7 @@
         "Domain checks"
       ]
     },
-    "actual_result": "3/3 runs passed. Verdicts: likely safe, phishing. Median tool calls: 3. ",
+    "actual_result": "3/3 runs passed. Verdicts: likely safe, phishing. Median tool calls: 2. ",
     "status": "pass"
   },
   {
@@ -188,7 +188,7 @@
       "max_risk": 39,
       "no_warning_observations": true
     },
-    "actual_result": "2/2 runs passed. Verdicts: likely safe. Median tool calls: 2.5. ",
+    "actual_result": "3/3 runs passed. Verdicts: likely safe. Median tool calls: 3. ",
     "status": "pass"
   },
   {
@@ -209,8 +209,8 @@
         ]
       ]
     },
-    "actual_result": "1/3 runs passed. Verdicts: phishing. Median tool calls: 4. Failed checks: observed:check_lookalike_domain=warning.",
-    "status": "partial"
+    "actual_result": "3/3 runs passed. Verdicts: phishing. Median tool calls: 4. ",
+    "status": "pass"
   },
   {
     "id": "martina-11",
@@ -244,7 +244,7 @@
       "max_risk": 39,
       "no_warning_observations": true
     },
-    "actual_result": "2/2 runs passed. Verdicts: likely safe. Median tool calls: 2.0. ",
+    "actual_result": "2/2 runs passed. Verdicts: likely safe. Median tool calls: 1.0. ",
     "status": "pass"
   },
   {
@@ -267,8 +267,8 @@
         ]
       ]
     },
-    "actual_result": "Not run with a model (fallback only).",
-    "status": "pending"
+    "actual_result": "1/1 runs passed. Verdicts: suspicious. Median tool calls: 2. ",
+    "status": "pass"
   },
   {
     "id": "case-07",
@@ -290,7 +290,7 @@
         ]
       ]
     },
-    "actual_result": "1/1 runs passed. Verdicts: phishing. Median tool calls: 2. ",
+    "actual_result": "1/1 runs passed. Verdicts: phishing. Median tool calls: 4. ",
     "status": "pass"
   },
   {
@@ -311,7 +311,7 @@
         ]
       ]
     },
-    "actual_result": "2/2 runs passed. Verdicts: phishing. Median tool calls: 1.0. ",
+    "actual_result": "1/1 runs passed. Verdicts: phishing. Median tool calls: 1. ",
     "status": "pass"
   },
   {
@@ -354,7 +354,7 @@
         ]
       ]
     },
-    "actual_result": "2/2 runs passed. Verdicts: phishing. Median tool calls: 4.0. ",
+    "actual_result": "1/1 runs passed. Verdicts: phishing. Median tool calls: 5. ",
     "status": "pass"
   },
   {
@@ -369,7 +369,7 @@
         "suspicious"
       ]
     },
-    "actual_result": "2/2 runs passed. Verdicts: phishing. Median tool calls: 5.0. ",
+    "actual_result": "1/1 runs passed. Verdicts: phishing. Median tool calls: 5. ",
     "status": "pass"
   },
   {
@@ -390,8 +390,8 @@
         ]
       ]
     },
-    "actual_result": "2/2 runs passed. Verdicts: suspicious. Median tool calls: 3.0. ",
-    "status": "pass"
+    "actual_result": "Not run with a model (fallback only).",
+    "status": "pending"
   },
   {
     "id": "case-13",
@@ -428,7 +428,7 @@
         ]
       ]
     },
-    "actual_result": "2/2 runs passed. Verdicts: phishing. Median tool calls: 4.5. ",
-    "status": "pass"
+    "actual_result": "1/2 runs passed. Verdicts: phishing. Median tool calls: 5.5. Failed checks: observed:check_domain_age=warning.",
+    "status": "partial"
   }
 ]

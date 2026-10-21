@@ -51,8 +51,19 @@ from src.schemas.agent import AnalysisResult, AnalysisStatus
 from src.schemas.responses import Verdict
 import src.services.service_factory as factory
 
+class _ReasonCollector(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(logging.WARNING)
+        self.reasons: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.reasons.append(record.getMessage())
+
+
+COLLECTOR = _ReasonCollector()
+
 BAD_DB = "postgresql://spotthephish:spotthephish@127.0.0.1:1/none"
-LEAK_MARKERS = ("Traceback", "psycopg", "OperationalError", "Exception", "postgresql://", "key=")
+LEAK_MARKERS = ("Traceback", "psycopg", "OperationalError", "Exception", "postgresql://", "key=", "x-goog-api-key", "AIza")
 CASES_FILE = Path(__file__).with_name("martina_test_cases.json")
 RESULTS_FILE = Path(__file__).with_name("results") / "martina_results.json"
 
@@ -138,6 +149,7 @@ def run_trial(case: dict, number: int) -> dict:
     if scenario == "db_down":
         config.database_url = BAD_DB
     try:
+        COLLECTOR.reasons.clear()
         result = service.analyze(raw)
     finally:
         config.database_url = original_url
@@ -154,6 +166,7 @@ def run_trial(case: dict, number: int) -> dict:
         "model_calls": result.model_calls, "duration_ms": result.duration_ms,
         "unavailable_tools": verdict.unavailable_tools if verdict else [],
         "warnings": result.warnings, "checks": checks,
+        "fallback_reason": COLLECTOR.reasons[-1] if COLLECTOR.reasons else "",
         "failed_checks": [name for name, ok in checks.items() if not ok],
         "passed": all(checks.values()),
     }
@@ -221,6 +234,27 @@ def ollama_reachable() -> bool:
     except httpx.HTTPError:
         return False
 
+def print_totals(trials: list[dict], cases: list[dict]) -> None:
+    category = {c["id"]: c["category"] for c in cases}
+    stats: dict[str, list[int]] = {}
+    for t in trials:
+        s = stats.setdefault(category[t["case"]], [0, 0, 0]) # valid, passed, fallback
+        if t["valid_for_model_eval"]:
+            s[0] += 1
+            s[1] += int(t["passed"])
+        else:
+            s[2] += 1
+    print("\n| Category | Valid runs | Passed | Failed | Pass rate | Fallback runs |")
+    print("|---|---:|---:|---:|---:|---:|")
+    total = [0, 0, 0]
+    for name, (valid, passed, fb) in sorted(stats.items()):
+        rate = f"{100 * passed / valid:.0f}%" if valid else "n/a"
+        print(f"| {name} | {valid} | {passed} | {valid - passed} | {rate} | {fb} |")
+        total = [a + b for a, b in zip(total, (valid, passed, fb))]
+    valid, passed, fb = total
+    rate = f"{100 * passed / valid:.0f}%" if valid else "n/a"
+    print(f"| **All** | {valid} | {passed} | {valid - passed} | {rate} | {fb} |")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -231,7 +265,10 @@ def main() -> None:
     parser.add_argument("--write-cases", action="store_true", help="write actual_result and status into the cases file")
     parser.add_argument("--require-model", action="store_true", help="abort when Ollama is not reachable")
     args = parser.parse_args()
-    logging.disable(logging.CRITICAL)
+    logging.getLogger().addHandler(logging.NullHandler())
+    ai_logger = logging.getLogger("src.services.ai_service")
+    ai_logger.addHandler(COLLECTOR)
+    ai_logger.propagate = False
 
     if not ollama_reachable():
         message = f"Ollama is not reachable at {config.ollama_base_url}: every run would use the offline fallback."
@@ -261,6 +298,7 @@ def main() -> None:
     args.out.write_text(json.dumps({"meta": meta, "summary": rows, "trials": trials}, indent=2,
                                    ensure_ascii=False) + "\n", encoding="utf-8")
     print_markdown(rows, meta)
+    print_totals(trials, selected)
     if args.write_cases:
         write_back(args.cases, cases, rows)
 
