@@ -224,3 +224,66 @@ The important result is the last column: the scan caused no false alarm on 1,000
 - [ ] Clear the case history and set `CASE_HISTORY_WRITE=false` before every evaluation run, and run each case at least three times.
 - [x] Repeat the cases with `qwen3:8b` (Run E).
 - [ ] Consider a safety rule for a lookalike domain without any registration record, which would have prevented the false negative in case 27.
+
+
+### Baselines and detection quality (Jaiesh)
+
+**Setup:** model `qwen2.5:3b` through Ollama on a laptop without a graphics card, temperature 0, step budget 6, commit `50e6bff`, `EVAL_CACHE_MODE=off` (live online checks) and no writing to the case history. Every email ran once in each of three configurations with `python -m evaluation.run_evaluation`: the **agent** (the application), the **fixed pipeline** (every check on every email, then one model call) and **llm_only** (one model call, no checks). The set has 35 hand-crafted emails with a known label, 25 phishing and 10 legitimate (`eval_cases.json` and `eval_cases_extra.json`), so there are 105 runs, and the run took about two hours. A `suspicious` verdict counts as phishing, because the user is warned. The raw results are in `evaluation/results/20261021-223130/`.
+
+#### Detection quality
+
+| Configuration | TP | FP | TN | FN | Accuracy | Precision | Recall | F1 | False-positive rate |
+|---|---|---|---|---|---|---|---|---|---|
+| agent | 25 | 5 | 5 | 0 | 0.857 | 0.833 | 1.00 | 0.909 | 0.50 |
+| fixed_pipeline | 23 | 0 | 10 | 2 | 0.943 | 1.00 | 0.92 | 0.958 | 0.00 |
+| llm_only | 21 | 1 | 9 | 4 | 0.857 | 0.955 | 0.84 | 0.894 | 0.10 |
+
+Four runs ended in the offline fallback (case 26 in all three configurations and case 24 in the fixed pipeline). They are included above because the user sees that verdict too. With only the runs where the model answered, the numbers hardly change (agent F1 0.906, fixed pipeline 0.955, llm_only 0.889).
+
+#### Efficiency and reliability
+
+| Configuration | Median time per email | Mean model calls | Mean tool calls | Offline fallbacks | Runs with invalid model output |
+|---|---|---|---|---|---|
+| agent | 74.7 s | 5.2 | 2.9 | 1 | 3 |
+| fixed_pipeline | 58.7 s | 1.0 | 6.6 | 2 | 1 |
+| llm_only | 26.3 s | 1.1 | 0 | 1 | 5 |
+
+#### Which emails each configuration got wrong
+
+- **agent (5 false positives, no false negatives):** the genuine PDF attachment email (13), the genuine email with a brand word in its domain (18), the genuine GitHub password reset (23), the genuine GitHub security alert (j01) and the genuine Finnish HAMK reminder (j02).
+- **fixed_pipeline (2 false negatives, no false positives):** the HAMK lookalike (02) and the invoice from a new domain (03).
+- **llm_only (4 false negatives, 1 false positive):** the new-domain invoice (03), the suspicious attachment (08), the injection in an otherwise harmless email (12) and the phishing link after a long text (27). The false positive is the GitHub security alert (j01).
+
+#### What the results show
+
+- **Tools matter for what the text alone cannot show.** llm_only missed the dangerous attachment (08) and the link after the cut-off of the prompt (27). The agent and the fixed pipeline caught both, because the checks read the full parsed email. llm_only also has the lowest recall (0.84).
+- **In this run the agent did not beat the fixed pipeline.** The agent never missed a phishing email, but it rated five genuine emails as phishing. The fixed pipeline rated all ten genuine emails correctly, but missed two phishing emails. It was also faster, because it needs one model call instead of 5.2 on average, even though it runs more tools (6.6 against 2.9).
+- **The agent's false positives are all on genuine emails with alarming wording or well-known domains.** This agrees with the observations of Run D above, where the 3B model associated words such as password reset with phishing. We did not read the traces of these five runs, so we do not know why the agent was less careful than the fixed pipeline. This should be checked before drawing a conclusion.
+- **The answers of the 3B model are not stable.** The Finnish HAMK reminder (j02) was rated likely safe when we tried it in the interface and phishing here. The password expiry notice (j05) ended in the fallback after a timeout in the first try and was rated likely safe here. The GitHub alert (j01) was rated phishing both times.
+
+#### My behaviour test cases (`jaiesh_test_cases.json`)
+
+| Case | Input | Result |
+|---|---|---|
+| jaiesh-01 | Genuine GitHub security alert | Fail: rated phishing by the agent and by llm_only. The fixed pipeline rated it likely safe. |
+| jaiesh-02 | Genuine Finnish HAMK reminder | Pass in the interface, but phishing in the evaluation run (see above) |
+| jaiesh-03 | Empty input | Pass: refused with a clear message |
+| jaiesh-04 | The text `hello` | Partial: not an email, but analysed and rated phishing instead of being refused |
+| jaiesh-05 | Genuine HAMK password expiry notice | Partial: fallback after a model timeout in the first try, likely safe in the evaluation run |
+
+#### Limitations
+
+- The set is small and unbalanced: 35 emails, of which only 10 are legitimate, so a single email changes the false-positive rate by 0.10. Differences of one or two emails between configurations are not reliable.
+- Every email ran once per configuration. Elif's rounds showed that the 3B model changes its answers between runs, so the table could look different on another run.
+- The online checks ran live (`EVAL_CACHE_MODE=off`) and the case history was not written. The domain checks for the fictional `.example` domains therefore had no seeded results, which may explain the two misses of the fixed pipeline (02 and 03). We did not check this.
+- The label of case 12 (injection in a harmless email) is phishing in this evaluation, although Martina's expected verdict is suspicious.
+- The Zenodo sample has not been run yet.
+
+#### Action items
+
+- [x] LLM-only and fixed-pipeline baselines (`src/capabilities/baselines.py`).
+- [x] Evaluation runner with precision, recall, F1, false-positive rate, latency and tool calls (`evaluation/run_evaluation.py`).
+- [ ] Read the traces of the agent's five false positives and find out why the fixed pipeline handled them correctly.
+- [ ] Run the evaluation with `--cache replay` and with three runs per email.
+- [ ] Run the Zenodo sample (`--zenodo 20`).
+- [ ] Refuse input that is clearly not an email (jaiesh-04), instead of analysing the word `hello`.
