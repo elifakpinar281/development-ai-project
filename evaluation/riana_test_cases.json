@@ -4,44 +4,116 @@
     "owner": "Riana Debre",
     "category": "successful_case",
     "input": "evaluation/cases/29-legit-hamk.eml",
+    "label": "legitimate",
     "expected_behavior": "check_email_authentication verifies SPF, DKIM, DMARC as pass. analyze_links and inspect_attachments find zero threats. Verdict is 'likely safe' with risk score < 20.",
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "verdict_in": [
+        "likely safe"
+      ],
+      "max_risk": 20,
+      "require_observations": [
+        [
+          "check_email_authentication",
+          "success"
+        ]
+      ]
+    },
+    "actual_result": "Verdict: likely safe (Risk: 0.0). Authentication passed with no sender forgery, 1 genuine domain link verified, 0 attachment threats.",
+    "status": "pass"
   },
   {
     "id": "30",
     "owner": "Riana Debre",
     "category": "successful_case",
     "input": "evaluation/cases/30-auth-spoof-moodle.eml",
+    "label": "phishing",
     "expected_behavior": "check_email_authentication flags display name spoofing ('helpdesk' on gmail.com), Reply-To domain mismatch, and SPF/DMARC failure. Risk score >= 70, verdict 'phishing'.",
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "critical": true,
+      "verdict_in": [
+        "phishing"
+      ],
+      "min_risk": 70,
+      "require_observations": [
+        [
+          "check_email_authentication",
+          "warning"
+        ]
+      ]
+    },
+    "actual_result": "Verdict: phishing (Risk: 100.0). Flagged SPF/DKIM/DMARC failure, Reply-To mismatch to phishingsite.org, and brand impersonation of helpdesk on free webmail.",
+    "status": "pass"
   },
   {
     "id": "31",
     "owner": "Riana Debre",
     "category": "successful_case",
     "input": "evaluation/cases/31-attachment-double-ext.eml",
+    "label": "phishing",
     "expected_behavior": "inspect_attachments identifies double extension '.pdf.exe' and executable payload. Tool flags risk >= 90. Verdict is 'phishing'.",
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "critical": true,
+      "verdict_in": [
+        "phishing"
+      ],
+      "min_risk": 90,
+      "require_observations": [
+        [
+          "inspect_attachments",
+          "warning"
+        ]
+      ]
+    },
+    "actual_result": "Verdict: phishing (Risk: 95.0). Flagged dangerous double extension 'Posti_Delivery_Receipt.pdf.exe' and executable binary payload.",
+    "status": "pass"
   },
   {
     "id": "32",
     "owner": "Riana Debre",
     "category": "difficult_case",
     "input": "evaluation/cases/32-deceptive-links-punycode.eml",
+    "label": "phishing",
     "expected_behavior": "analyze_links flags anchor text mismatch (nordea.fi vs raw IP 192.168.1.50) and Punycode homograph (xn--norda-qqa.fi). Verdict is 'phishing'.",
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "verdict_in": [
+        "phishing"
+      ],
+      "min_risk": 70,
+      "require_observations": [
+        [
+          "analyze_links",
+          "warning"
+        ]
+      ]
+    },
+    "actual_result": "Verdict: phishing (Risk: 90.0). Flagged deceptive anchor text pointing to raw IP 192.168.1.50 and Punycode homograph domain xn--norda-qqa.fi.",
+    "status": "pass"
   },
   {
     "id": "33",
     "owner": "Riana Debre",
     "category": "failure_case",
-    "input": "evaluation/cases/33-headerless-raw-body.txt",
+    "input": "evaluation/cases/33-headerless-raw-body.eml",
+    "label": "phishing",
     "expected_behavior": "Parser handles raw pasted text gracefully (has_headers=False). check_email_authentication returns warning for missing headers. analyze_links catches bit.ly shortener.",
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "verdict_in": [
+        "suspicious",
+        "phishing"
+      ],
+      "min_risk": 50,
+      "require_observations": [
+        [
+          "check_email_authentication",
+          "warning"
+        ],
+        [
+          "analyze_links",
+          "warning"
+        ]
+      ]
+    },
+    "actual_result": "Verdict: suspicious (Risk: 58.8). has_headers=False correctly detected, authentication warning issued for missing RFC headers, bit.ly shortener flagged.",
+    "status": "pass"
   }
 ]
