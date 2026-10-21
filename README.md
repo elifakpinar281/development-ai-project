@@ -130,7 +130,7 @@ If the model fails (Ollama not running, model not installed, timeout or output t
 
 The full description with diagrams is in [`docs/architecture.md`](docs/architecture.md). The reasons behind each design choice are in [`docs/project-decisions.md`](docs/project-decisions.md).
 
-![Components and layers](docs/images/1-components.png)
+![Architecture diagram](docs/graphics/Architecture_Diagram.png)
 
 ```text
 User
@@ -174,7 +174,7 @@ Application Service (src/services/ai_service.py)
   - **Small and fast:** The 3B model runs on a normal laptop with 8 GB RAM and answers fast enough for an interactive tool. The facts come from the tools, so the model mainly has to choose checks, read the language of the email and explain the result.
   - **Configurability:** The model is set through environment variables, so `qwen2.5:3b` and `qwen3:8b` can be compared without changing the application.
 - **Evaluation result:** with the same code, `qwen3:8b` passed 9 of our 10 test emails without a false alarm, `qwen2.5:3b` only 6 of 10. The 8B model took about three minutes per email on our laptops instead of one to two. We therefore keep the 3B model as the default for laptops without a graphics card and recommend `qwen3:8b` whenever the hardware allows it (see [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md)).
-- **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in `.env` (see Decision 9).
+- **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 300 seconds per call. All settings can be changed in `.env` (see Decision 9).
 
 ## Additional AI capability
 
@@ -352,7 +352,7 @@ A false negative (phishing classified as safe) is the most harmful error, so **r
 
 ### Test cases
 
-There are 33 behaviour-focused test cases with 28 emails, listed in [`evaluation/p3_test_cases.json`](evaluation/p3_test_cases.json) and [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json). They cover three categories:
+There are 38 behaviour-focused test cases with 33 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model) and [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks). They cover three categories:
 
 - **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
 - **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails and a repeated campaign.

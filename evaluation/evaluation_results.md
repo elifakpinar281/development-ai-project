@@ -117,8 +117,8 @@ The case history was not empty in Runs B, C and D, because earlier runs had stor
 | case-26 | Phishing in Finnish | Phishing or suspicious | Phishing 70 | Phishing 75 | Phishing 70 | Phishing 70 | Phishing 70 | Pass |
 | case-27 | Phishing link after 7,700 characters | At least suspicious, link used | Phishing 80 | Fallback | Phishing 75, wrong reasons | Phishing 75, wrong reasons | **Likely safe 30** | **Fail** |
 | case-28 | Fake security banner | Real failed checks win | Phishing 100 | Phishing 70 | Phishing 100 | Phishing 70 | Phishing 70, authentication not checked | Partial |
-| case-29 | Ollama stopped or model not installed | Labelled fallback with a hint | n/a | Pass | Pass | Pass | Pass | Pass |
-| case-30 | Invalid model output and input | Refused, corrected or rejected | n/a | Pass | Pass | Pass | Pass | Pass |
+| case-34 | Ollama stopped or model not installed | Labelled fallback with a hint | n/a | Pass | Pass | Pass | Pass | Pass |
+| case-35 | Invalid model output and input | Refused, corrected or rejected | n/a | Pass | Pass | Pass | Pass | Pass |
  
 (1) Since Run D, the offline fallback also runs the payment fraud scan. Before, it rated case 25 likely safe.
  
@@ -150,12 +150,12 @@ The waiting time depends a lot on the state of the laptop. Case 27 took 54 s in 
 - **The grounding check caught invented evidence in every run.** Misspelled Finnish quotes (26) and quotes of the hidden HTML instruction that are not in the email (19) never reached the user.
 - **The registry stopped invalid calls.** It refused a domain that does not appear in the email (26, Run C) and a call without its required argument (25, Run D). In both cases the model continued normally.
 - **The gift card scam is detected reliably since Run B.** Since Run D this no longer depends on the model at all. The payment fraud scan marks the email and the safety rule guarantees at least suspicious, even in the offline fallback.
-- **The fallback gives a clear message.** With a model that is not installed, the user gets a labelled offline result and the exact command to fix it (29).
+- **The fallback gives a clear message.** With a model that is not installed, the user gets a labelled offline result and the exact command to fix it (34).
 #### Observed failure modes
  
 - **The judgement of the 3B model changes between runs.** Cases 27 and 28 got different results in every round, although nothing relevant to them was changed. Case 27 was rated phishing for the wrong reasons in Runs B and C and likely safe in Run D, after the model had used every tool and seen the lookalike warning. In case 28 the model checked the authentication in Runs A to C but not in Run D. With one run per case and round, a single changed result is therefore not a reliable sign of improvement or regression.
 - **The genuine password reset was flagged in three runs in a row (23).** It stayed phishing in Run D, although the fraud rule that seemed to cause it had been removed from the prompt. The model calls the reset link suspicious while every check is clean. The small model seems to associate the words "password reset" strongly with phishing.
-- **The memory can turn a hacked account into a false alarm (22).** The gift card scam (25) comes from a real hamk.fi address, as it would from a hacked account. Its phishing verdicts were stored with the sender domain hamk.fi. In Runs C and D the case history reported up to ten earlier phishing cases for hamk.fi, and the genuine course announcement from hamk.fi was rated phishing. In real use, one hacked university account could make every later university email look suspicious. The case history should not match on the sender domain of well-known domains, as it already does for link domains. This belongs to the memory part of the application (Person 3).
+- **The memory can turn a hacked account into a false alarm (22).** The gift card scam (25) comes from a real hamk.fi address, as it would from a hacked account. Its phishing verdicts were stored with the sender domain hamk.fi. In Runs C and D the case history reported up to ten earlier phishing cases for hamk.fi, and the genuine course announcement from hamk.fi was rated phishing. In real use, one hacked university account could make every later university email look suspicious. The case history should not match on the sender domain of well-known domains, as it already does for link domains. This belongs to the memory part of the application (Martina).
 - **Explanations contain false claims.** Examples are "office.com, a known phishing domain" (21), "the email lacks proper authentication" although the check reported the opposite (23, 26) and "the URL was not listed, indicating it may be malicious" (28). The validator checks that every evidence item points to a real observation or quote, but not whether the sentence about it is true.
 #### Model comparison: qwen2.5:3b and qwen3:8b
  
@@ -198,14 +198,14 @@ All fixes were chosen after looking at these ten cases, so Runs B to D are not a
  
 - **General fixes:** the stricter evidence schema, the removal of repeated evidence and the model name in the warning. They fix a mechanism, not a single email, and would be needed for any input.
 - **Targeted fix:** the payment fraud scan detects one known attack type (gift card and CEO fraud). It does not copy the wording of case 25. It only fires when a request for money, gift cards, bank details or codes appears together with urgency, secrecy or an excuse why the sender cannot be called.
-To check the scan on data it was not built for, we ran it without the model over all 2,000 emails of the Zenodo dataset and over the 18 cases of Person 3:
+To check the scan on data it was not built for, we ran it without the model over all 2,000 emails of the Zenodo dataset and over the 18 cases of Martina:
  
 | Data | Emails of the targeted attack type | Found by the scan | False alarms on legitimate emails |
 |---|---|---|---|
 | Zenodo, 1,000 phishing and 1,000 legitimate texts | none (the phishing texts are prize and account scams) | no hits expected | 0 of 1,000 |
-| Cases 01 to 18 of Person 3 | 1 (case 11, CEO payment fraud) | 1 of 1 | 0 of 4 |
+| Cases 01 to 18 of Martina | 1 (case 11, CEO payment fraud) | 1 of 1 | 0 of 4 |
  
-The important result is the last column: the scan caused no false alarm on 1,000 legitimate texts. It also found the CEO fraud case that Person 3 wrote independently. Detecting the Zenodo phishing texts is the job of the model and the other checks, which the shared evaluation measures. The scan is therefore narrow by design.
+The important result is the last column: the scan caused no false alarm on 1,000 legitimate texts. It also found the CEO fraud case that Martina wrote independently. Detecting the Zenodo phishing texts is the job of the model and the other checks, which the shared evaluation measures. The scan is therefore narrow by design.
  
 #### Conclusions
  
@@ -220,8 +220,7 @@ The important result is the last column: the scan caused no false alarm on 1,000
 - [x] Remove repeated evidence items.
 - [x] Name the missing model in the warning.
 - [x] Replace the fraud rule in the prompt with the deterministic scan_payment_fraud check and the payment_fraud safety rule.
-- [ ] Do not match the case history on the sender domain of well-known domains, as is already done for link domains (memory part, Person 3).
+- [ ] Do not match the case history on the sender domain of well-known domains, as is already done for link domains (memory part, Martina).
 - [ ] Clear the case history and set `CASE_HISTORY_WRITE=false` before every evaluation run, and run each case at least three times.
 - [x] Repeat the cases with `qwen3:8b` (Run E).
 - [ ] Consider a safety rule for a lookalike domain without any registration record, which would have prevented the false negative in case 27.
-
