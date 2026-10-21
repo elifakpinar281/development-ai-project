@@ -31,7 +31,16 @@ _URL_RE = re.compile(r"^https?://[^\s]+$", re.IGNORECASE)
 WARN_THRESHOLD = 40
 MIN_BRAND_LABEL_EMBEDDED = 4
 MIN_BRAND_LABEL_FUZZY = 5
+GENERIC_BRAND_LABELS = {"office", "apple", "zoom"}
+ACCOUNT_WORDS = {"login", "signin", "sign-in", "verify", "account", "secure", "security", "password", "support", "update", "365"}
 
+def _embedded_brand_counts(brand_label: str, label: str) -> bool:
+    if brand_label not in GENERIC_BRAND_LABELS:
+        return True
+    for word in ACCOUNT_WORDS:
+        if word in label:
+            return True
+    return False
 
 def normalize_domain(value: str) -> str:
     if not isinstance(value, str):
@@ -235,7 +244,8 @@ def check_lookalike_domain(domain: str) -> ToolResult:
         else:
             for label in {registrable_label, normalized_label}:
                 if (len(brand_label) >= MIN_BRAND_LABEL_EMBEDDED
-                        and brand_label in label and 70 > candidate_risk):
+                        and brand_label in label and 70 > candidate_risk
+                        and _embedded_brand_counts(brand_label, label)):
                     candidate_risk = 60
                     candidate_type = "brand_embedded"
                 if (len(brand_label) >= MIN_BRAND_LABEL_FUZZY
@@ -251,7 +261,9 @@ def check_lookalike_domain(domain: str) -> ToolResult:
         if subdomain_forms and candidate_risk < 80 and len(brand_label) >= 3:
             for form in subdomain_forms:
                 tokens = set(re.split(r"[.\-]", form))
-                if brand_label in tokens or brand in form:
+                token_match = brand_label in tokens and _embedded_brand_counts(brand_label, form)
+                full_match = re.search(r"(?:^|[.\-])" + re.escape(brand) + r"(?:$|[.\-])", form) is not None
+                if token_match or full_match:
                     candidate_risk = 80
                     candidate_type = "brand_in_subdomain"
                     break
@@ -435,7 +447,7 @@ def _lookup_reputation(url: str) -> ToolResult:
     except httpx.TimeoutException as exc:
         raise ServiceTimeoutError() from exc
     except httpx.HTTPError as exc:
-        raise ServiceTimeoutError() from exc
+        raise ServiceResponseError() from exc
 
     if response.status_code == 429:
         raise RateLimitError()

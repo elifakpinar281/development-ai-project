@@ -1,4 +1,4 @@
-"""Evaluation runner for the domain checks and the case history (Person 3).
+"""Evaluation runner for the domain checks and the case history (Martina).
 
 Runs every case in martina_test_cases.json several times through the real
 AnalysisService (agent + MCP domain server + PostgreSQL) and grades each trial
@@ -265,6 +265,8 @@ def main() -> None:
     parser.add_argument("--write-cases", action="store_true", help="write actual_result and status into the cases file")
     parser.add_argument("--require-model", action="store_true", help="abort when Ollama is not reachable")
     args = parser.parse_args()
+    if args.write_cases and args.only:
+        sys.exit("--write-cases cannot be combined with --only: the cases file must come from one complete run")
     logging.getLogger().addHandler(logging.NullHandler())
     ai_logger = logging.getLogger("src.services.ai_service")
     ai_logger.addHandler(COLLECTOR)

@@ -131,7 +131,12 @@
     "owner": "Martina Spiegel",
     "category": "failure_case",
     "input": "evaluation/cases/03-new-domain-invoice.eml",
-    "expected_behavior": "Online checks unavailable (empty evaluation cache). The tools return 'unavailable', the agent continues, a verdict is still produced, the unavailable checks are listed, no raw error is shown.",
+    "expected_behavior": "Online checks unavailable (empty evaluation cache). If the agent calls check_domain_age, it returns 'unavailable', the agent continues, a verdict is still produced, the check is listed as unavailable and no raw error is shown. Whether the 3B model calls the check is not deterministic, so the unavailable path is also covered by automated tests.",
+    "automated_tests": [
+      "tests/test_domain_tools.py::test_eval_cache_miss_makes_domain_age_unavailable",
+      "tests/test_agent.py::test_unavailable_tool_does_not_stop_the_agent_and_cannot_be_cited",
+      "tests/test_ai_service.py::test_unavailable_checks_and_missing_headers_produce:warnings"
+    ],
     "setup": "runner truncates eval_cache for this case",
     "grading": {
       "scenario": "empty_cache",
@@ -186,7 +191,8 @@
         "likely safe"
       ],
       "max_risk": 39,
-      "no_warning_observations": true
+      "no_warning_observations": true,
+      "require_observations": [["check_lookalike_domain", "success"]]
     },
     "actual_result": "3/3 runs passed. Verdicts: likely safe. Median tool calls: 3. ",
     "status": "pass"
@@ -217,7 +223,7 @@
     "owner": "Martina Spiegel",
     "category": "difficult_case",
     "input": "evaluation/cases/17-legit-subject-like-campaign.eml",
-    "expected_behavior": "Legitimate internal mail whose subject matches an earlier phishing campaign (martina-03). Documents the false-match limitation: suspicious is acceptable (history safety rule), phishing is not.",
+    "expected_behavior": "Legitimate internal mail whose subject matches an earlier phishing campaign (martina-03). lookup_case_history must run and report the match; the known_phishing_campaign rule then gives suspicious. Documents the false-match limitation: suspicious is acceptable, phising is not",
     "setup": "history is prepared by the runner (03 stored as phishing)",
     "grading": {
       "history_precondition": [
@@ -226,7 +232,8 @@
       "verdict_in": [
         "likely safe",
         "suspicious"
-      ]
+      ],
+      "require_observations": [["check_lookalike_domain", "warning"]]
     },
     "actual_result": "1/1 runs passed. Verdicts: likely safe. Median tool calls: 0. ",
     "status": "pass"
@@ -236,13 +243,14 @@
     "owner": "Martina Spiegel",
     "category": "difficult_case",
     "input": "evaluation/cases/18-legit-brand-word-in-domain.eml",
-    "expected_behavior": "KNOWN LIMITATION. Harmless mail from lecture-office.example. The domain only contains the word 'office' (brand list contains office.com), so check_lookalike_domain reports 'brand name embedded'. Ideal result: likely safe; expected to fail until the heuristic is refined.",
+    "expected_behavior": "Harmless mail from lecture-office.example. The domain contains the ordinary word 'office (office.com is a known brand). A generic brand word only counts as an embedded brand together with an account word such as login or verify, so check_lookalike_domain reports no match and the verdict is likely safe.",
     "grading": {
       "verdict_in": [
         "likely safe"
       ],
       "max_risk": 39,
-      "no_warning_observations": true
+      "no_warning_observations": true,
+      "require_observations": [["check_lookalike_domain", "success"]]
     },
     "actual_result": "2/2 runs passed. Verdicts: likely safe. Median tool calls: 1.0. ",
     "status": "pass"
@@ -405,7 +413,8 @@
         "likely safe"
       ],
       "max_risk": 39,
-      "no_warning_observations": true
+      "no_warning_observations": true,
+      "require_observations": [["check_lookalike_domain", "success"]]
     },
     "actual_result": "1/1 runs passed. Verdicts: likely safe. Median tool calls: 0. ",
     "status": "pass"

@@ -79,6 +79,7 @@ FREE_MAIL_DOMAINS = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com"
                      "yahoo.com", "icloud.com", "proton.me", "protonmail.com", "gmx.com",
                      "gmx.de", "web.de", "aol.com"}
 IGNORED_FOR_MATCHING = set(KNOWN_BRANDS) | FREE_MAIL_DOMAINS
+MIN_SUBJECT_WORDS = 3
 
 
 def matchable_sender(domain: str) -> str:
@@ -98,7 +99,7 @@ def subject_fingerprint(subject: str) -> str:
     normalized = re.sub(r"\d+", "#", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
 
-    if not normalized:
+    if len(normalized.split(" ")) < MIN_SUBJECT_WORDS:
         return ""
 
     return hashlib.sha256(

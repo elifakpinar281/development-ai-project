@@ -2,7 +2,7 @@ From: HAMK IT Support <it-support@hamk-student-login.example>
 To: student@hamk-test.example
 Subject: Your HAMK password expires today
 Date: Mon, 12 Oct 2026 10:02:11 +0000
-<eval-02@hamk-student-login.example>
+Message-ID: <eval-02@hamk-student-login.example>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 

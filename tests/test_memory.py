@@ -120,3 +120,8 @@ def test_known_sender_domain_is_not_matched(monkeypatch):
 def test_fingerprint_drops_known_sender():
     raw = "From: Moodle <noreply@hamk.fi>\nTo: a@x.example\nSubject: Hi\nDate: Mon, 1 Jan 2026 10:00:00 +0000\n\nHello"
     assert memory.fingerprint(parse_email(raw))["sender_domain"] == ""
+
+def test_short_subjects_are_not_used_for_matching():
+    assert memory.subject_fingerprint("Hello") == ""
+    assert memory.subject_fingerprint("Re: Invoice") == ""
+    assert memory.subject_fingerprint("Invoice 20931 overdue") == memory.subject_fingerprint("Invoice 20931 overdue")

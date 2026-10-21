@@ -79,7 +79,7 @@ The script grade_cases runs every test case that has an .eml file and grading ru
 # cases 19 to 30
 python -m evaluation.grade_cases --cases evaluation/elif_test_cases.json
 
-# the cases of Person 3
+# the cases of Martina
 python -m evaluation.grade_cases --cases evaluation/martina_test_cases.json
 
 # selected cases, three runs each to check that the results are stable

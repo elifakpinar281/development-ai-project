@@ -2,7 +2,7 @@ From: Parcel Service <noreply@parcel-notice-center.example>
 To: staff1@hamk-test.example
 Subject: Parcel 8841 could not be delivered - confirm address
 Date: Wed, 14 Oct 2026 07:30:00 +0000
-<eval-04@parcel-notice-center.example>
+Message-ID: <eval-04@parcel-notice-center.example>
 MIME-Version: 1.0
 Content-Type: text/plain; charset="utf-8"
 

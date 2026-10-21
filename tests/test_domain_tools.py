@@ -229,8 +229,34 @@ def test_every_mcp_tool_has_a_description():
     ("paypa1.evil-site.com", "paypal.com"),
     ("https://paypal.com.secure-id.net/login", "paypal.com"),
 ])
+
 def test_lookalike_brand_in_subdomain(domain, brand):
     r = t.check_lookalike_domain(domain)
     assert r.status == "warning" and r.risk_score == 80
     assert r.details["matched_brand"] == brand
     assert r.details["match_type"] == "brand_in_subdomain"
+
+@pytest.mark.parametrize("domain", ["lecture-office.example", "apple-orchard.example", "zoom-photography.example"])
+def test_generic_brand_word_alone_is_not_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "success"
+
+@pytest.mark.parametrize("domain", ["office365-login.example", "apple-account-verify.example"])
+def test_generic_brand_word_with_account_word_is_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "warning"
+
+def test_eval_cache_miss_makes_domain_age_unavailable(monkeypatch):
+    from src.capabilities import eval_cache
+    monkeypatch.setattr(t.config, "eval_cache_mode", "reply")
+    monkeypatch.setattr(eval_cache, "_read", lambda tool_name, key: None)
+    result = t.check_domain_age("invoice-portal-ab12.example")
+    assert result.status == "unavailable"
+    assert "Traceback" not in result.finding
+
+@pytest.mark.parametrize("domain", ["office.company.example", "apple.recipes.example", "zoom.uscourses.example"])
+def test_generic_word_in_subdomain_is_not_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "success"
+
+@pytest.mark.parametrize("domain, brand", [("login.paypal.com.evil.example", "paypal.com"), ("office-login.company.example", "office.com")])
+def test_brand_in_subdomain(domain, brand):
+    r = t.check_lookalike_domain(domain)
+    assert r.status == "warning" and r.details["matched_brand"] == brand

@@ -2,7 +2,7 @@ From: Accounts Payable <accounts@invoice-review.example>
 To: finance@company-test.example
 Subject: Updated invoice - action required
 Date: Thu, 15 Oct 2026 10:05:00 +0000
-<eval-08@invoice-review.example>
+Message-ID: <eval-08@invoice-review.example>
 MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="testboundary08"
 

@@ -108,6 +108,7 @@ The four domain and memory tools (`check_lookalike_domain`, `check_domain_age`, 
 - The SDK's default environment for child processes drops variables such as `DATABASE_URL`, so the client passes the environment on explicitly.
 - We pin `mcp>=1.2,<2`. Version 2 of the SDK renamed the server API, and our code and the course examples use the v1 API.
 - The offline fallback must work even if MCP is down. It therefore calls `check_lookalike_domain` directly as a Python function.
+- **Tool descriptions are the model's only guide:** The prompt lists every tool by name and description, and for MCP tools the description is the docstring of the server function. A review found that the four domain tools had no docstring, so the model saw only their names. In the first evaluation run it skipped the lookalike check in 2 of 8 valid runs on lookalike cases, which this probably contributed to. Each tool now has a short description of what it checks and when it is useful, and a test checks that every tool of the server has one.
 
 ---
 
@@ -125,7 +126,7 @@ Validated verdicts are stored as fingerprints in a PostgreSQL table (`case_histo
 **Why we chose this:**
 - **Lifetime of the information:** Lecture 2 and 6 distinguish session state from persistent memory. A verdict about a campaign should outlive a session and be usable by later analyses, so it belongs in persistent storage.
 - **Privacy by design:** Only matching fingerprints are stored, and a test checks that the table has no body column and that body text never appears in the stored data.
-- **Campaign matching that works:** The subject is normalised before hashing (lower case, reply prefixes removed, digits replaced). "Parcel 8841 could not be delivered" and "RE: Parcel 5530 could not be delivered" produce the same fingerprint, so a campaign with changing tracking numbers is recognised. Link domains of well-known brands are ignored for matching, because they appear in countless legitimate emails.
+- **Campaign matching that works:** The subject is normalised before hashing (lower case, reply prefixes removed, digits replaced). "Parcel 8841 could not be delivered" and "RE: Parcel 5530 could not be delivered" produce the same fingerprint, so a campaign with changing tracking numbers is recognised. Link domains of well-known brands are ignored for matching, because they appear in countless legitimate emails. The same applies to the sender domain: sender domains of well-known organisations (`KNOWN_BRANDS`) and of free-mail providers are neither stored nor matched. The evaluation showed why. A gift card scam sent from a real `hamk.fi` account was stored as phishing, and the case history then reported earlier phishing cases for `hamk.fi` when a genuine course announcement arrived, which was rated phishing (see evaluation_results.md). A hacked university account would otherwise make every later university email look suspicious.
 - **A previous verdict is evidence, not an answer:** The tool returns a finding and a risk contribution, and the agent still decides. A wrong earlier verdict therefore cannot silently repeat itself. A match on sender domain or subject pattern with an earlier "phishing" verdict counts more (risk 70) than a link-domain match alone (risk 55).
 - **Fallback verdicts are not stored:** They are rule-based and less reliable, and storing them would spread their errors.
 - **Why PostgreSQL:** The history and the evaluation cache are shared state used by several processes and several team members. PostgreSQL gives concurrent access, array columns with a GIN index for link-domain matching, and JSONB for cached results. Docker Compose makes the setup reproducible. Separate databases (`spotthephish`, `spotthephish_eval`, `spotthephish_test`) keep development data, evaluation runs and tests apart.
@@ -133,7 +134,7 @@ Validated verdicts are stored as fingerprints in a PostgreSQL table (`case_histo
 **Trade-offs:**
 - Docker (or a local PostgreSQL) is now required to run the full application.
 - If the database is unavailable, `lookup_case_history` returns `unavailable` and saving a verdict raises a controlled `DatabaseUnavailableError`. The analysis itself continues without the history.
-- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. In the evaluation, repeated-campaign cases required a median of 2 tool calls, compared with 3 for the other cases. This suggests that case history can reduce the number of checks when a matching previous verdict is available. However, fallback verdicts are not stored, so the benefit depends on the model successfully completing an analysis and saving a validated verdict.
+- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. In the evaluation, the repeated-campaign case `martina-05` needed a median of [3.5] tool calls, compared with [3] for the first email of the campaign (`martina-04`), so we cannot claim that the case history reduces the number of checks. It also depends on the model completing an analysis and saving a validated verdict, because fallback verdicts are not stored.
 - Verdicts from the offline fallback are not stored, so the case history is only filled when the AI model was used. The repeated-campaign evaluation cases therefore need the model.
 ---
 
@@ -150,7 +151,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 **Why we chose this:**
 - **Controlled failure states (Lecture 2):** Each exception knows its result status. Invalid input maps to `error`. A service that is down, rate-limited, missing a key or not reachable maps to `unavailable`. The agent receives an observation, continues with the remaining evidence, and the UI lists which checks could not be run.
 - **Distinguishes causes:** "No API key", "rate limit" and "timeout" are different situations with different user-facing messages, which a single generic error would hide.
-- **No secrets in messages:** The reason texts are fixed and safe to display. The Safe Browsing key is sent as a URL parameter, and HTTP library errors can contain that URL. We therefore never copy the original error text into a message, and only the exception type is logged. A test checks that the key does not appear in the result.
+- **No secrets in messages, logs or configuration output:** The reason texts are fixed and safe to display, and only the exception type is logged. The Safe Browsing key is sent in the `x-goog-api-key` header, not in the URL. Our first version put it in the URL. The HTTP library logs every request URL at INFO level, and during an evaluation run the key appeared in the terminal output. We therefore changed to the header, set the `httpx` and `httpcore` loggers to WARNING (in the application and in the MCP server, which is a separate process), excluded the key and the database URL from the `repr` of the configuration object, and revoked and replaced the exposed key. Tests check that the key is sent in the header and not in the URL, that it does not appear in any result, that the loggers are silenced and that the configuration `repr` does not show secrets.
 - **Failures are never cached:** Because failures raise, the evaluation cache cannot freeze a temporary outage as a result.
 - **Unexpected bugs are contained:** Any other exception is caught at the same boundary and reported as `unavailable` with only its type name.
 - **Input validation protects the services:** A domain is validated and normalised before it is placed into an RDAP request URL, and a URL must be a plain http/https URL. Invalid input never leads to a network request.
@@ -164,7 +165,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 ## Decision 7 — Domain checks: heuristics, services and thresholds
 
 **Decision:**
-- **Lookalike domains** are detected offline by comparing the domain name with a list of well-known brands (including `hamk.fi`). The rules are: character substitution (for example `paypa1`, `amaz0n`, Cyrillic lookalike letters, also inside punycode domains), the same name under a different domain ending, a brand name of at least 4 characters embedded in a longer name (`hamk-student-login`), and an edit distance of 1 or 2 for names with at least 5 characters.
+- **Lookalike domains** are detected offline by comparing the domain with a list of well-known brands (including `hamk.fi`). The rules and their risk contributions are: character substitution such as `paypa1`, `amaz0n` or Cyrillic lookalike letters, also inside punycode domains (90); a brand name in a subdomain, for example `paypal.com.secure-id.net` (80, the full host name is examined because the registrable domain alone would hide this trick); an edit distance of 1 (85) or 2 (65) for names with at least 5 characters; the same name under a different domain ending (60); and a brand name of at least 4 characters embedded in a longer name such as `hamk-student-login` (60). Brand names that are also ordinary words (`office`, `apple`, `zoom`) only count as embedded or as a subdomain when the name also contains an account word such as `login`, `verify`, `secure` or `365`. So `lecture-office.example` is not flagged, while `office365-login.example` is.
 - **Domain age** is read from RDAP. Domains younger than 7 days get a high risk contribution (90), under 30 days 75, under 90 days 45, under a year 10.
 - **URL reputation** uses the Google Safe Browsing Lookup API when an API key is configured.
 
@@ -186,6 +187,7 @@ Failures of the domain tools are modelled as custom exceptions (`src/exceptions.
 - The brand list is small and must be maintained. A legitimate company that shares a name with a listed brand can be flagged.
 - Several limits of the external services are listed under "Known limitations".
 - The first version of the rules produced false alarms: our brand list contains `op.fi`, and a two-letter brand name appears inside many normal words (`shop.fi`, `stop.com`), and a short name was also within edit distance 2 of almost any short domain. We therefore apply the "embedded name" rule only to brand names with at least 4 characters and the edit-distance rule only to names with at least 5 characters. A legitimate domain that merely contains a brand name (for example `hamkkeri.example`) is still flagged. We accept this because the tool only reports a similarity signal, and the verdict also depends on other evidence.
+- Two rules changed after the evaluation. The offline fallback rated the harmless email from `lecture-office.example` as phishing, because a brand word inside a domain was scored 70, the phishing threshold. A brand word alone is a weaker signal than a character substitution, so it now scores 60 (suspicious), and generic words need an account word. A legitimate subdomain that contains a brand name (for example `github.company.example`) is still reported.
 
 ---
 
@@ -222,9 +224,11 @@ The two online tools (domain age and URL reputation) can run in three modes, set
   - Privacy: the case history has no body column and stores no body text.
   - Memory: campaign match through a subject variant, ignored brand links, fallback verdicts not stored, writing can be disabled, controlled error if the database is down.
   - Evaluation cache: record, then replay, cache miss, seeding.
-  - MCP: the server lists exactly the four tools, the write function is not exposed, the synchronous client works and unknown tools are rejected.
+    - MCP: the server lists exactly the four tools, each with a description, the write function is not exposed, the synchronous client works and unknown tools are rejected.
   - **Hand-crafted evaluation cases:** 21 cases in `evaluation/martina_test_cases.json` (12 `martina-*` cases for domain checks and case history, 9 `case-*` cases for attachments, prompt injection and fraud). Graders are code-based and critical cases are reported separately. Results: `evaluation/evaluation_results.md`.
-
+  - Secrets: the Safe Browsing key is sent in a header and not in the URL, the `httpx` and `httpcore` loggers are silenced, and the configuration `repr` hides the key and the database URL.
+  - Lookalike rules: a brand in a subdomain (also with confusable letters and inside a URL), generic brand words alone and together with an account word, and known subdomains such as `login.hamk.fi` as clean cases.
+  - Memory: sender domains of well-known organisations are neither stored nor matched.
 
 ---
 

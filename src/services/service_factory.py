@@ -130,7 +130,7 @@ def build_analyzer(name: str, components: Components) -> Analyzer:
             validator=components.validator,
             max_steps=settings.agent_max_tool_calls,
             max_body_chars=settings.prompt_max_body_chars,
-            automatic_checks=[scan_for_prompt_injection, scan_for_payment_fraud],
+            automatic_checks=[scan_for_prompt_injection, scan_for_payment_fraud, scan_lookalike_domains],
         )
     raise ValueError(f"Unknown analyzer '{name}'. Choose one of: {', '.join(ANALYZER_NAMES)}.")
 
@@ -233,3 +233,21 @@ def _start_domain_server() -> Optional[McpToolSource]:
 
     atexit.register(client.close)
     return McpToolSource(client)
+
+def scan_lookalike_domains(email: ParsedEmail) -> ToolResult:
+    results = lookalike_checks(email)
+    if not results:
+        return ToolResult(
+            tool_name="check_lookalike_domain",
+            status="success",
+            finding="No sender or link domain could be checked for similarity to known domains.",
+            risk_score=0,
+            evidence=[],
+            details={"checked_domains": 0},
+            is_offline=True,
+        )
+    highest = results[0]
+    for result in results:
+        if result.risk_score > highest.risk_score:
+            highest = result
+    return highest
