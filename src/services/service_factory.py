@@ -11,6 +11,7 @@ from src.capabilities import tools as email_tools
 from src.capabilities.agent import AgentAnalyzer
 from src.capabilities.analyzer import Analyzer
 from src.capabilities.email_fields import real_subject
+from src.capabilities.fraud_scan import scan_for_payment_fraud
 from src.capabilities.injection_scan import scan_for_prompt_injection
 from src.capabilities.mcp_client import DomainToolsClient
 from src.capabilities.offline_analyzer import OfflineAnalyzer, OfflineCheck
@@ -106,7 +107,7 @@ def build_components(
 
     registry = ToolRegistry(sources, argument_fillers={"lookup_case_history": case_history_arguments})
 
-    offline_checks: list[OfflineCheck] = [injection_check, lookalike_checks]
+    offline_checks: list[OfflineCheck] = [injection_check, fraud_check, lookalike_checks]
     for tool in EMAIL_TOOLS:
         offline_checks.append(as_offline_check(tool.function))
 
@@ -129,7 +130,7 @@ def build_analyzer(name: str, components: Components) -> Analyzer:
             validator=components.validator,
             max_steps=settings.agent_max_tool_calls,
             max_body_chars=settings.prompt_max_body_chars,
-            automatic_checks=[scan_for_prompt_injection],
+            automatic_checks=[scan_for_prompt_injection, scan_for_payment_fraud],
         )
     raise ValueError(f"Unknown analyzer '{name}'. Choose one of: {', '.join(ANALYZER_NAMES)}.")
 
@@ -188,6 +189,10 @@ def case_history_arguments(email: ParsedEmail) -> dict:
 
 def injection_check(email: ParsedEmail) -> list[ToolResult]:
     return [scan_for_prompt_injection(email)]
+
+
+def fraud_check(email: ParsedEmail) -> list[ToolResult]:
+    return [scan_for_payment_fraud(email)]
 
 
 def lookalike_checks(email: ParsedEmail) -> list[ToolResult]:

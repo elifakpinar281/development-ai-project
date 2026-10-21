@@ -4,6 +4,7 @@ from src.capabilities import prompts
 from src.capabilities.injection_scan import scan_for_prompt_injection
 from src.capabilities.tool_registry import EmailScope, ToolSpec
 from src.schemas.agent import Observation
+from src.schemas.responses import ToolResult
 from tests.fakes import DOMAIN_PARAMETERS, make_email, result
 
 
@@ -50,7 +51,33 @@ def test_final_prompt_separates_citable_and_not_citable():
 def test_verdict_schema_has_no_references():
     schema = prompts.verdict_schema()
     assert "$defs" not in str(schema) and "$ref" not in str(schema)
-    assert schema["properties"]["evidence"]["items"]["properties"]["source"]["enum"] == ["tool", "email_text"]
+    variants = schema["properties"]["evidence"]["items"]["anyOf"]
+    sources = [variant["properties"]["source"]["enum"][0] for variant in variants]
+    assert sources == ["tool", "email_text"]
+
+
+def test_verdict_schema_forces_quote_or_observation_number():
+    schema = prompts.verdict_schema([1, 3])
+    tool_item, email_item = schema["properties"]["evidence"]["items"]["anyOf"]
+    assert tool_item["properties"]["observation_id"] == {"type": "integer", "enum": [1, 3]}
+    assert tool_item["properties"]["quote"] == {"type": "null"}
+    assert email_item["properties"]["quote"]["minLength"] == 4
+    assert email_item["properties"]["observation_id"] == {"type": "null"}
+    assert set(email_item["required"]) == {"source", "observation_id", "quote", "claim"}
+    assert schema["properties"]["evidence"]["minItems"] == 1
+
+
+def test_verdict_schema_without_citable_checks_allows_only_quotes():
+    schema = prompts.verdict_schema([])
+    variants = schema["properties"]["evidence"]["items"]["anyOf"]
+    assert len(variants) == 1
+    assert variants[0]["properties"]["source"]["enum"] == ["email_text"]
+
+
+def test_only_checks_that_ran_are_citable():
+    ran = Observation(observation_id=1, result=ToolResult(tool_name="a", finding="x"))
+    unavailable = Observation(observation_id=2, result=ToolResult(tool_name="b", status="unavailable", finding="y"))
+    assert prompts.citable_observation_ids([ran, unavailable]) == [1]
 
 
 @pytest.mark.parametrize("raw,expected", [

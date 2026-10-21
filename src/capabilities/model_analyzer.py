@@ -1,4 +1,3 @@
-
 from __future__ import annotations
  
 import time
@@ -93,7 +92,7 @@ class ModelAnalyzer(Analyzer):
         return self.model_client.chat(run.messages, response_schema=schema)
  
     def _request_verdict(self, run: AnalysisRun) -> Verdict:
-        schema = prompts.verdict_schema()
+        schema = prompts.verdict_schema(prompts.citable_observation_ids(run.observations))
         raw = self._ask_model(run, schema)
  
         for attempt in range(self.max_repairs + 1):
@@ -153,4 +152,3 @@ def validation_problems(error: ValidationError) -> list[str]:
         else:
             problems.append(f"{location}: {message}")
     return problems or ["The reply could not be read."]
- 

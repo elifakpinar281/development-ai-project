@@ -14,7 +14,7 @@ class Config:
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
     model_name: str = os.getenv("MODEL_NAME", "qwen2.5:3b")
 
-    model_timeout: float = float(os.getenv("MODEL_TIMEOUT", "120"))
+    model_timeout: float = float(os.getenv("MODEL_TIMEOUT", "300"))
 
     model_temperature: float = float(os.getenv("MODEL_TEMPERATURE", "0"))
 

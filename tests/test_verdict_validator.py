@@ -124,3 +124,19 @@ def test_high_risk_warning_rule():
     outcome = apply_safety_rules("likely safe", 0, [result("inspect_attachments", "warning", 85)])
     assert outcome.verdict == "suspicious" and outcome.verdict_raised
     assert [rule.rule_id for rule in outcome.applied] == ["high_risk_finding"]
+
+
+def test_repeated_evidence_is_shown_only_once():
+    observations = [Observation(observation_id=1, result=result("scan_prompt_injection"))]
+    answer = ModelVerdict(
+        verdict="phishing", risk_score=80, explanation="x", recommended_action="y",
+        evidence=[
+            EvidenceCitation(source="email_text", quote="Your HAMK account will be suspended within 24 hours.", claim="Threat."),
+            EvidenceCitation(source="email_text", quote="account will be suspended", claim="Threat again."),
+            EvidenceCitation(source="tool", observation_id=1, claim="Scan ran."),
+            EvidenceCitation(source="tool", observation_id=1, claim="Scan ran."),
+            EvidenceCitation(source="email_text", quote="Confirm your password now.", claim="Password request."),
+        ],
+    )
+    verdict = VerdictValidator().build_verdict(answer, observations)
+    assert len(verdict.evidence) == 3
