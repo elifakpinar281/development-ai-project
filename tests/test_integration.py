@@ -89,7 +89,8 @@ def test_arguments_a_tool_does_not_take_are_refused():
         final(evidence=[{"source": "tool", "observation_id": 1, "quote": None, "claim": "Scan ran."}]),
     ])
     result = service.analyze(read_case("01-lookalike-paypal.eml"))
-    assert result.trace[1].kind == "rejected_call"
+    kinds = [step.kind for step in result.trace]
+    assert kinds[:3] == ["automatic_check", "automatic_check", "rejected_call"]
 
 
 def test_ollama_down_uses_the_offline_checks_of_person_1_and_3():
