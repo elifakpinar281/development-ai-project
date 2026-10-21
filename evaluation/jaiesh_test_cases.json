@@ -1,0 +1,52 @@
+[
+  {
+    "id": "jaiesh-01",
+    "owner": "Jaiesh Badireddy",
+    "category": "difficult_case",
+    "input": "evaluation/cases/j01-legit-security-alert.eml",
+    "expected_behavior": "Alarming wording (security alert, sign-in) but a legitimate sender and link on github.com. Verdict likely safe (false-positive check).",
+    "grading": {"critical": true, "verdict_in": ["likely safe"], "max_risk": 39},
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "jaiesh-02",
+    "owner": "Jaiesh Badireddy",
+    "category": "difficult_case",
+    "input": "evaluation/cases/j02-legit-finnish-notice.eml",
+    "expected_behavior": "Legitimate non-English (Finnish) mail from hamk.fi with a deadline. Not flagged as phishing just because of the language. Verdict likely safe.",
+    "grading": {"critical": true, "verdict_in": ["likely safe"], "max_risk": 39, "no_warning_observations": true},
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "jaiesh-03",
+    "owner": "Jaiesh Badireddy",
+    "category": "failure_case",
+    "input": "evaluation/cases/j03-empty-input.eml",
+    "expected_behavior": "Empty input is rejected with the message 'Paste an email or upload an .eml file to start.' No verdict, no crash, no raw error.",
+    "grading": {"expect_rejected": true},
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "jaiesh-04",
+    "owner": "Jaiesh Badireddy",
+    "category": "failure_case",
+    "input": "evaluation/cases/j04-not-an-email.eml",
+    "expected_behavior": "Plain text that is not an email ('hello') is handled in a controlled way: rejected with a friendly message or analysed with a no-headers warning. No crash, no raw error.",
+    "grading": {"expect_rejected_or_no_headers_warning": true},
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "jaiesh-05",
+    "owner": "Jaiesh Badireddy",
+    "category": "difficult_case",
+    "input": "evaluation/cases/j05-legit-password-expiry.eml",
+    "expected_behavior": "Urgent-sounding password-expiry notice from the real hamk.fi that says no password is requested by email. Verdict likely safe or at most suspicious, never phishing.",
+    "grading": {"verdict_in": ["likely safe", "suspicious"], "max_risk": 59},
+    "actual_result": "",
+    "status": "pending"
+  }
+]
