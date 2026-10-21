@@ -5,7 +5,13 @@
     "category": "difficult_case",
     "input": "evaluation/cases/j01-legit-security-alert.eml",
     "expected_behavior": "Alarming wording (security alert, sign-in) but a legitimate sender and link on github.com. Verdict likely safe (false-positive check).",
-    "grading": {"critical": true, "verdict_in": ["likely safe"], "max_risk": 39},
+    "grading": {
+      "critical": true,
+      "verdict_in": [
+        "likely safe"
+      ],
+      "max_risk": 39
+    },
     "actual_result": "",
     "status": "pending"
   },
@@ -15,9 +21,16 @@
     "category": "difficult_case",
     "input": "evaluation/cases/j02-legit-finnish-notice.eml",
     "expected_behavior": "Legitimate non-English (Finnish) mail from hamk.fi with a deadline. Not flagged as phishing just because of the language. Verdict likely safe.",
-    "grading": {"critical": true, "verdict_in": ["likely safe"], "max_risk": 39, "no_warning_observations": true},
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "critical": true,
+      "verdict_in": [
+        "likely safe"
+      ],
+      "max_risk": 39,
+      "no_warning_observations": true
+    },
+    "actual_result": "Run with qwen2.5:3b via the UI (agent, 6 model calls, 103 s). Verdict: likely safe, risk 39 (exactly at the limit). No tool warnings except 'case history unavailable' (Postgres not running locally). Quality note: the explanation wrongly says no deadline is mentioned and one evidence item checks example.com (the recipient domain). The language alone did not trigger a false alarm.",
+    "status": "pass"
   },
   {
     "id": "jaiesh-03",
@@ -25,9 +38,11 @@
     "category": "failure_case",
     "input": "evaluation/cases/j03-empty-input.eml",
     "expected_behavior": "Empty input is rejected with the message 'Paste an email or upload an .eml file to start.' No verdict, no crash, no raw error.",
-    "grading": {"expect_rejected": true},
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "expect_rejected": true
+    },
+    "actual_result": "Run via the UI: empty input is rejected with 'Paste an email or upload an .eml file to start.' No verdict, no crash, no raw error.",
+    "status": "pass"
   },
   {
     "id": "jaiesh-04",
@@ -35,9 +50,11 @@
     "category": "failure_case",
     "input": "evaluation/cases/j04-not-an-email.eml",
     "expected_behavior": "Plain text that is not an email ('hello') is handled in a controlled way: rejected with a friendly message or analysed with a no-headers warning. No crash, no raw error.",
-    "grading": {"expect_rejected_or_no_headers_warning": true},
-    "actual_result": "",
-    "status": "pending"
+    "grading": {
+      "expect_rejected_or_no_headers_warning": true
+    },
+    "actual_result": "Run with qwen2.5:3b via the UI (agent, 5 model calls, 74 s). No crash and a warning that the email has no headers, but the verdict was phishing, risk 75, with an explanation that invents a gmail.com sender. Limitation: non-email text is not rejected and the model can hallucinate; a minimal-input guard in the parser would fix this.",
+    "status": "partial"
   },
   {
     "id": "jaiesh-05",
@@ -45,7 +62,13 @@
     "category": "difficult_case",
     "input": "evaluation/cases/j05-legit-password-expiry.eml",
     "expected_behavior": "Urgent-sounding password-expiry notice from the real hamk.fi that says no password is requested by email. Verdict likely safe or at most suspicious, never phishing.",
-    "grading": {"verdict_in": ["likely safe", "suspicious"], "max_risk": 59},
+    "grading": {
+      "verdict_in": [
+        "likely safe",
+        "suspicious"
+      ],
+      "max_risk": 59
+    },
     "actual_result": "",
     "status": "pending"
   }
