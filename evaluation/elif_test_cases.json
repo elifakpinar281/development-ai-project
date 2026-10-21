@@ -244,7 +244,7 @@
     "actual_result_qwen3_8b": "qwen3:8b: phishing, risk 100, cites the real SPF, DMARC, Reply-To and Return-Path findings. 1 tool call, 3 model calls, 134 s."
   },
   {
-    "id": "case-29",
+    "id": "case-34",
     "owner": "Elif Akpinar",
     "category": "failure_case",
     "input": "Any email while Ollama is not running, and any email with MODEL_NAME set to a model that is not installed",
@@ -262,7 +262,7 @@
     "actual_result_run_c": "Model not installed (MODEL_NAME=wrongmodel): labelled offline fallback, phishing 80, with the warning to run 'ollama pull wrongmodel' or change MODEL_NAME. Ollama stopped: labelled fallback with the hint to start Ollama."
   },
   {
-    "id": "case-30",
+    "id": "case-35",
     "owner": "Elif Akpinar",
     "category": "failure_case",
     "input": "The model returns invalid JSON, an unknown tool, a domain that is not in the email or evidence that no check produced. The user sends empty input, only spaces or more than 200000 characters.",
