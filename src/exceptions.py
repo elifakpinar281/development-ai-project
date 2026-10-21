@@ -107,9 +107,17 @@ class ModelUnavailableError(ModelError):
 class ModelNotFoundError(ModelUnavailableError):
     default_reason = "The configured model is not installed in Ollama."
     user_message = (
-        "The configured AI model is not installed in Ollama (run 'ollama pull <model>'), "
-        "so SpotThePhish used its offline checks instead."
+        "The configured AI model is not installed in Ollama (run 'ollama pull' with the model name "
+        "from MODEL_NAME), so SpotThePhish used its offline checks instead."
     )
+
+    def __init__(self, reason: str | None = None, model_name: str | None = None):
+        super().__init__(reason)
+        if model_name:
+            self.user_message = (
+                f"The AI model '{model_name}' is not installed in Ollama (run 'ollama pull {model_name}' "
+                "or change MODEL_NAME in .env), so SpotThePhish used its offline checks instead."
+            )
 
 
 class ModelTimeoutError(ModelUnavailableError):

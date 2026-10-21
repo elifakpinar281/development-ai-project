@@ -4,6 +4,20 @@ Group project for the Development of AI Applications course (Autumn 2026).
 
 SpotThePhish is a local AI assistant that checks a single email for phishing. It explains its verdict with evidence that the application has verified, so the user can see why an email is dangerous instead of getting a bare yes or no.
 
+## Quick start
+
+You need Conda, Ollama and Docker. The full steps with explanations are in [Setup](#setup).
+
+```bash
+conda env create -f environment.yml  
+conda activate dev-ai-project
+cp .env.example .env 
+ollama pull qwen2.5:3b 
+docker compose up -d  
+
+python -m app.main
+```
+
 ## Team members
 
 - Elif Akpinar (amk1020345@student.hamk.fi)
@@ -105,7 +119,7 @@ The application code controls which tools exist, validates every tool call, limi
 
 1. **User input:** The user pastes an email or uploads an `.eml` file in the Gradio interface.
 2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input before any model call. The email parser then extracts sender, reply-to, return-path, authentication results, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
-3. **Prompt injection scan:** Before the model sees the email, a deterministic scan looks for instructions aimed at AI tools, also in hidden HTML. Its result is always the first observation.
+3. **Automatic scans:** Before the model sees the email, two deterministic scans run. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 and 2.
 4. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the result as a numbered observation. This repeats until the model finishes or the budget of 6 steps is used up.
 5. **Verdict validation:** The model's final report must match a fixed schema. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
 6. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation, warnings and investigation trace. A fingerprint of the validated verdict is stored in the case history.
@@ -116,7 +130,7 @@ If the model fails (Ollama not running, model not installed, timeout or output t
 
 The full description with diagrams is in [`docs/architecture.md`](docs/architecture.md). The reasons behind each design choice are in [`docs/project-decisions.md`](docs/project-decisions.md).
 
-![Components and layers](docs/images/1-components.png)
+![Architecture diagram](docs/graphics/Architecture_Diagram.png)
 
 ```text
 User
@@ -127,6 +141,7 @@ Application Service (src/services/ai_service.py)
   | → Email Parser (src/email_parser.py): deterministic parsing
   | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 steps
   |    → Prompt Injection Scan (src/capabilities/injection_scan.py): always observation 1
+  |    → Payment Fraud Scan (src/capabilities/fraud_scan.py): always observation 2
   |    → Tool Registry (src/capabilities/tool_registry.py): validates every tool call
   |       - email checks, in-process (src/capabilities/tools.py):
   |           check_email_authentication, analyze_links, inspect_attachments
@@ -152,13 +167,14 @@ Application Service (src/services/ai_service.py)
 ## Model
 
 - **Model used:** `qwen2.5:3b`, running locally through Ollama. `qwen3:8b` can be used instead by changing `MODEL_NAME`, without any code change.
-- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 60 seconds. Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes, and the larger model did not change the results much in our tests.
+- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 60 seconds. Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes. The larger model judges difficult emails better, as our evaluation shows, so the choice is a trade-off between speed and accuracy.
 - **Selection rationale:**
   - **Privacy:** Emails may contain personal and confidential data. Running the model locally through Ollama keeps the email and its analysis on the user's machine instead of sending them to a third-party LLM API.
   - **Structured output:** The agent loop depends on reliable JSON decisions and a schema-conformant final report. Qwen3 supports structured output in Ollama, and the schema even limits the model to the real tool names.
   - **Small and fast:** The 3B model runs on a normal laptop with 8 GB RAM and answers fast enough for an interactive tool. The facts come from the tools, so the model mainly has to choose checks, read the language of the email and explain the result.
   - **Configurability:** The model is set through environment variables, so `qwen2.5:3b` and `qwen3:8b` can be compared without changing the application.
-- **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in `.env` (see Decision 9).
+- **Evaluation result:** with the same code, `qwen3:8b` passed 9 of our 10 test emails without a false alarm, `qwen2.5:3b` only 6 of 10. The 8B model took about three minutes per email on our laptops instead of one to two. We therefore keep the 3B model as the default for laptops without a graphics card and recommend `qwen3:8b` whenever the hardware allows it (see [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md)).
+- **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 300 seconds per call. All settings can be changed in `.env` (see Decision 9).
 
 ## Additional AI capability
 
@@ -207,6 +223,8 @@ The needed knowledge is not in a document collection. It comes from the email it
 ```bash
 conda env create -f environment.yml
 ```
+
+Without Conda, create a virtual environment with Python 3.12 and install the same packages with `pip install -r requirements.txt`. Then skip step 2.
 
 ### 2. Activate the environment
 
@@ -330,11 +348,11 @@ All three use the same prompts, the same verdict validation and the same safety 
 | Evidence grounding | Checked automatically for every evidence item: it must cite a check that ran or quote the email word for word |
 | Case history | For the repeated campaign case: whether the earlier verdict is recognised |
 
-A false negative (phishing classified as safe) is the most harmful error, so recall on phishing is the primary metric. A suspicious verdict counts as phishing by default, because the user is then warned.
+A false negative (phishing classified as safe) is the most harmful error, so **recall on phishing is the primary metric**. A suspicious verdict counts as phishing by default, because the user is then warned.
 
 ### Test cases
 
-There are 33 behaviour-focused test cases with 28 emails, listed in [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) and [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json). They cover three categories:
+There are 38 behaviour-focused test cases with 33 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model) and [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks). They cover three categories:
 
 - **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
 - **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails and a repeated campaign.
@@ -349,7 +367,9 @@ Each case records the expected behaviour, grading rules, the actual result and a
 - Emails pasted without headers cannot be checked for authentication results, which weakens the assessment.
 - Phishing sent from compromised legitimate accounts passes authentication and domain checks, so detection then depends mainly on the language analysis.
 - A small local model (3B) may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback limit the impact, but they do not eliminate errors.
-- On a computer without a graphics card, the model runs on the processor. One analysis takes about 60 seconds with `qwen2.5:3b` and around 3 minutes with `qwen3:8b` (not consistent).
+- On a computer without a graphics card, the model runs on the processor. In our evaluation with `qwen2.5:3b`, one analysis took between about 40 seconds and 3 minutes, with a median of 77 to 140 seconds depending on the run.
+- The judgement of the 3B model varies between runs and is sensitive to the wording of the prompt. In our evaluation it rated a genuine password reset as phishing in three runs in a row (case-23), and its explanations sometimes contain claims that no check supports. The deterministic checks and safety rules give the same result every time, so we moved the gift card and payment fraud detection into such a check.
+- The case history matches on the sender domain. One phishing email from a hacked account of a real organisation can therefore make later genuine emails from that organisation look like a known campaign (case-22). Ignoring the sender domain of well-known domains, as is already done for link domains, would prevent this.
 - The model only sees the first 6,000 characters of the body. The link and attachment checks still use the full email, but wording at the end of a very long email is not analysed by the model.
 - The prompt injection scan uses patterns for typical phrasings. An instruction without such phrases is not detected by the scan. In that case only the step budget, the argument checks and the safety rules protect the analysis.
 - The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk"). Risk values and thresholds are initial, hand-chosen settings.

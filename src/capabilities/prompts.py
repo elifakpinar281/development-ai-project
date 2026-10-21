@@ -3,11 +3,14 @@ from __future__ import annotations
 import json
 import re
 import secrets
+from typing import Optional
 
 from src.capabilities.email_fields import real_subject
 from src.capabilities.tool_registry import EmailScope, ToolSpec
+from src.capabilities.verdict_validator import MIN_QUOTE_CHARS
 from src.schemas.agent import AgentDecision, ChatMessage, ModelVerdict, Observation
 from src.schemas.responses import ParsedEmail
+
 
 MAX_EVIDENCE_LINES = 8
 MAX_LINE_CHARS = 200
@@ -282,6 +285,10 @@ Rules for evidence:
 - Checks that did not run (cannot be cited): {not_citable}.
 - A quote must be copied word for word from the email's subject or body.
 - Do not claim anything that no observation or quote supports.
+
+Rules for the verdict:
+- Judge the wording as well as the checks. A hacked account passes all technical checks, so a warning from scan_payment_fraud is strong evidence even when everything else is clean.
+- Normal emails also mention passwords, deadlines and links. An email with passing authentication that only links to the sender's own long-registered domain, for example a password reset the reader can simply ignore, is not phishing because of its wording alone. Meeting dates, registration deadlines and requests to read documents are not suspicious urgency.
 - When checks were unavailable or headers were missing, say in the explanation that the assessment is less certain."""
 
 
@@ -320,8 +327,57 @@ def decision_schema(tool_names: list[str]) -> dict:
     return schema
  
  
-def verdict_schema() -> dict:
-    return inline_schema_references(ModelVerdict.model_json_schema())
+def citable_observation_ids(observations: list[Observation]) -> list[int]:
+    ids: list[int] = []
+    for observation in observations:
+        if observation.result.status in ("success", "warning"):
+            ids.append(observation.observation_id)
+    return ids
+
+
+def verdict_schema(citable_ids: Optional[list[int]] = None) -> dict:
+    schema = inline_schema_references(ModelVerdict.model_json_schema())
+    claim = {"type": "string", "minLength": 1, "maxLength": 300,
+             "description": "What this evidence shows, in plain language."}
+
+    email_item = {
+        "type": "object",
+        "properties": {
+            "source": {"type": "string", "enum": ["email_text"]},
+            "observation_id": {"type": "null"},
+            "quote": {"type": "string", "minLength": MIN_QUOTE_CHARS, "maxLength": 300,
+                      "description": "Exact words copied from the email."},
+            "claim": claim,
+        },
+        "required": ["source", "observation_id", "quote", "claim"],
+        "additionalProperties": False,
+    }
+    variants = [email_item]
+
+    if citable_ids is None or citable_ids:
+        observation_id: dict = {"type": "integer", "minimum": 1}
+        if citable_ids:
+            observation_id = {"type": "integer", "enum": list(citable_ids)}
+        tool_item = {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "enum": ["tool"]},
+                "observation_id": observation_id,
+                "quote": {"type": "null"},
+                "claim": claim,
+            },
+            "required": ["source", "observation_id", "quote", "claim"],
+            "additionalProperties": False,
+        }
+        variants = [tool_item, email_item]
+
+    schema["properties"]["evidence"] = {
+        "type": "array",
+        "minItems": 1,
+        "maxItems": 8,
+        "items": {"anyOf": variants},
+    }
+    return schema
  
  
 def inline_schema_references(schema: dict) -> dict:

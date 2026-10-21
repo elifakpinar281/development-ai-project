@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Callable
 
+from src.capabilities.fraud_scan import TOOL_NAME as FRAUD_SCAN_TOOL
 from src.capabilities.injection_scan import TOOL_NAME as INJECTION_SCAN_TOOL
 from src.schemas.responses import ToolResult, VerdictType
 
@@ -70,6 +71,13 @@ def _prompt_injection_found(results: list[ToolResult]) -> bool:
     return False
 
 
+def _payment_fraud_found(results: list[ToolResult]) -> bool:
+    for result in results:
+        if result.tool_name == FRAUD_SCAN_TOOL and result.details.get("payment_fraud_detected") is True:
+            return True
+    return False
+
+
 def _high_risk_finding(results: list[ToolResult]) -> bool:
     for result in results:
         if result.status == "warning" and result.risk_score >= 80:
@@ -107,6 +115,13 @@ SAFETY_RULES: list[SafetyRule] = [
         minimum_verdict="suspicious",
         minimum_score=50,
         applies=_prompt_injection_found,
+    ),
+    SafetyRule(
+        rule_id="payment_fraud",
+        reason="the email asks for money, gift cards, bank details or codes under pressure or in secret",
+        minimum_verdict="suspicious",
+        minimum_score=60,
+        applies=_payment_fraud_found,
     ),
     SafetyRule(
         rule_id="high_risk_finding",
