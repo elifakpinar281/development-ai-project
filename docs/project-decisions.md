@@ -18,6 +18,7 @@ This log records the important technical decisions of the team. Every decision f
 | 12 | Grounded evidence, score bands and safety rules | Agent |
 | 13 | Model exceptions and an offline fallback | Agent |
 | 14 | Three configurations for the evaluation | Evaluation |
+| 15 | Deterministic email parsing and safe metadata inspection | Parser & Tools |
  
 
 
@@ -404,3 +405,57 @@ The cases of Martina already cover lookalike domains, domain age, campaigns, att
 Cases 19 to 28 are emails in evaluation/cases and are run with the real model. Each entry contains grading rules in the same format as the cases of Martina, together with the result of the offline fallback. Cases 34 and 35 are failure situations that are covered by automated tests, which are named in each entry.
 
 Two cases show limits on purpose. In case-21 the checklist contains no typical injection phrase, so the pattern scan does not detect it, and only the step budget protects the agent. In case-25 the offline fallback rates the email likely safe, because no tool finds anything and the fallback cannot judge language. This case shows why the language model is needed. The results of the runs are summarised in evaluation/evaluation_results.md.
+
+---
+
+## Decision 15 - Deterministic email parsing and safe metadata inspection (Riana)
+
+**Decision**
+All email parsing and local inspection tools are strictly deterministic and implemented in Python (`src/email_parser.py` and `src/capabilities/tools.py`). 
+1. **RFC 822 & 2047 parsing:** Headers, MIME compartments, and encoded words are decoded into typed Pydantic models (`ParsedEmail`, `EmailAddress`, `AuthenticationResults`, `LinkInfo`, `AttachmentMetadata`).
+2. **Safe passive attachment inspection:** Attachments are inspected purely through header metadata and filename strings. Payloads are never executed, opened, or written to disk.
+3. **HTML sanitization & fallback:** For HTML-only emails, BeautifulSoup strips script and style tags and extracts clean plain text. Links are extracted from HTML `<a>` tags first to preserve `href` vs displayed text mismatches.
+4. **Headerless input tolerance:** If a user pastes raw body text without RFC headers, the parser detects this (`has_headers=False`) and proceeds with link and body analysis instead of crashing.
+
+**Alternatives considered**
+- **Letting the LLM parse raw emails directly:** Rejected. LLMs frequently hallucinate header alignment, miss obfuscated Punycode domains, and miscalculate IP address links. Technical data must be extracted as hard facts.
+- **Active sandbox execution of attachments:** Rejected. Dynamic detonation introduces extreme security risks, high latency, and heavy infrastructure requirements. Metadata checks (double extensions, macro formats, executable extensions) catch typical attacks safely.
+
+**Why we chose this**
+- **Privacy and security:** Deterministic local parsing ensures email headers and attachments never leave the machine.
+- **Grounded facts:** Tool outputs provide verifiable facts with discrete risk scores (0–100) that feed into the agent's observation loop.
+- **Offline reliability:** The 3 in-process tools have zero network or API dependencies, powering the offline fallback when Ollama is down.
+
+---
+
+## Testing approach for email parsing, local checks, and pipeline fallback (Riana)
+
+My part is tested on two levels: automated unit tests covering parser edge cases and tool logic, and hand-crafted evaluation cases tested with both the offline fallback and the live AI model.
+
+### Automated tests
+
+All tests run with pytest and need neither Ollama, the network nor the database:
+- **Parser edge cases (`tests/test_email_parser.py`):**
+  - Raw pasted text without headers (`has_headers=False`, fallback subject).
+  - HTML-only emails with script/style stripping and plain text derivation.
+  - RFC 2047 encoded header words (e.g. UTF-8 base64 and ISO-8859-1 subjects).
+  - Link extraction: anchor text deception, raw IP addresses, shorteners, Punycode homographs.
+- **Tool tests (`tests/test_tools.py`):**
+  - `check_email_authentication`: Pass/fail states for SPF, DKIM, and DMARC; Reply-To and Return-Path domain mismatches; display name spoofing against European brands on free webmail.
+  - `analyze_links`: Flagging anchor text discrepancies, URL shorteners, and raw IP URLs.
+  - `inspect_attachments`: Identifying double extensions (`.pdf.exe`), executable binaries, macros, and archives.
+  - `run_offline_fallback`: Verifying mathematical risk aggregation and valid `Verdict` generation.
+
+### Hand-crafted cases
+
+My five cases in `evaluation/riana_test_cases.json` (files 29 to 33 in `evaluation/cases/`) focus on email structure and local technical checks:
+
+| Case | Category | Input | What it tests |
+|---|---|---|---|
+| **29** | successful_case | `29-legit-hamk.eml` | Clean university email passing SPF, DKIM, and DMARC with authentic links |
+| **30** | successful_case | `30-auth-spoof-moodle.eml` | Display name spoofing ('helpdesk' on free webmail), Reply-To mismatch, and failed SPF/DMARC |
+| **31** | successful_case | `31-attachment-double-ext.eml` | Dangerous double extension `.pdf.exe` masquerading as a delivery receipt |
+| **32** | difficult_case | `32-deceptive-links-punycode.eml` | Deceptive anchor text (Nordea text vs raw IP href) and Punycode homograph domain |
+| **33** | failure_case | `33-headerless-raw-body.eml` | Raw pasted body text without RFC headers, missing headers warning, and URL shortener |
+
+The evaluation results comparing the offline fallback against the `qwen3.5:4b` model are documented in `evaluation/evaluation_results.md`.

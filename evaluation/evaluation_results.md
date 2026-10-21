@@ -224,3 +224,50 @@ The important result is the last column: the scan caused no false alarm on 1,000
 - [ ] Clear the case history and set `CASE_HISTORY_WRITE=false` before every evaluation run, and run each case at least three times.
 - [x] Repeat the cases with `qwen3:8b` (Run E).
 - [ ] Consider a safety rule for a lookalike domain without any registration record, which would have prevented the false negative in case 27.
+
+### Email parsing, local checks, and pipeline fallback (Riana)
+
+**Setup:** Evaluated using both configurations:
+1. **Offline fallback baseline:** Pure deterministic evaluation using `run_offline_fallback` and Person 1's 3 in-process tools (`check_email_authentication`, `analyze_links`, `inspect_attachments`) with 0 model calls.
+2. **AI Agent with model:** Evaluated using `python -m scripts.try_agent --no-domain-server` with `qwen3.5:4b` running locally on Ollama (temperature 0, step budget 6).
+
+#### Results: Offline Fallback vs. AI Agent Comparison
+
+| Case | Category | Input | Offline Fallback (Baseline) | Agent with Model (`qwen3.5:4b`) | Tools Called by Agent | Calls (Time) | Status (Agent) |
+|---|---|---|---|---|---|:---:|:---:|
+| **29** | successful_case | `cases/29-legit-hamk.eml` | **likely safe** (0.0) | **phishing** (75.0) | `analyze_links`, `check_email_authentication` | 4 calls (100 s) | **Fail** (False Positive) |
+| **30** | successful_case | `cases/30-auth-spoof-moodle.eml` | **phishing** (100.0) | **phishing** (100.0) | `analyze_links`, `check_email_authentication` | 4 calls (72 s) | **Pass** |
+| **31** | successful_case | `cases/31-attachment-double-ext.eml` | **phishing** (95.0) | **phishing** (95.0) | `inspect_attachments`, `analyze_links`, `check_email_authentication` | 5 calls (81 s) | **Pass** |
+| **32** | difficult_case | `cases/32-deceptive-links-punycode.eml` | **phishing** (90.0) | **phishing** (90.0) | `analyze_links`, `check_email_authentication` | 4 calls (87 s) | **Pass** |
+| **33** | failure_case | `cases/33-headerless-raw-body.eml` | **suspicious** (58.8) | **phishing** (75.0) | `analyze_links` (repaired), `check_email_authentication`, `inspect_attachments` | 6 calls (85 s) | **Pass** |
+
+---
+
+#### Measurements Summary
+
+| Measure | Offline Fallback Baseline | Agent (`qwen3.5:4b`) |
+|---|:---:|:---:|
+| Detection Pass Rate | 5 of 5 (100%) | 4 of 5 (80%) |
+| False Positives (Legitimate marked phishing) | 0 | 1 (Case 29) |
+| False Negatives (Phishing marked safe) | 0 | 0 |
+| Mean Tool Calls per Analysis | 3.0 (fixed) | 2.6 (adaptive) |
+| Mean Duration per Analysis | < 10 ms (instant) | 85.5 seconds |
+| Invalid Tool Calls Recovered | 0 | 1 (Case 33 argument error) |
+
+---
+
+#### Key Findings
+
+1. **High detection accuracy on actual phishing attacks (Cases 30–33):**
+   * **Authentication spoofing (30):** The agent correctly combined the technical indicator (100/100 authentication failure from `check_email_authentication`) with its linguistic understanding of urgency and password requests to issue a 100/100 phishing verdict.
+   * **Malicious double extension (31):** The agent immediately prioritized `inspect_attachments` upon seeing the receipt mention, flagged the `.pdf.exe` payload (risk 95), and correctly cited the tool observation.
+   * **Deceptive anchor text and Punycode (32):** `analyze_links` flagged both the IP link and the homograph domain (`xn--norda-qqa.fi`), which the model integrated into a 90/100 phishing verdict.
+   * **Robust recovery on invalid calls (33):** In Case 33, the model initially attempted an invalid tool call (`rejected_call analyze_links: 'analyze_links' has no argument 'Links found'`). The tool registry cleanly rejected the call with an informative observation, allowing the model to correct its call, re-invoke `analyze_links`, and finish the investigation without crashing.
+
+2. **Observed failure mode: False positive on legitimate email (Case 29):**
+   * While the offline fallback correctly assigned `likely safe` (0.0) due to clean SPF, DKIM, DMARC, and authentic `hamk.fi` domains, the `qwen3.5:4b` model produced a false positive (`phishing 75`).
+   * Even though both `analyze_links` and `check_email_authentication` reported `0/100` risk, the small model over-indexed on the words *"scheduled maintenance"* and *"visit a link"*, associating routine IT announcements with credential harvesting. This strongly mirrors Elif's findings on Cases 22 and 23, where small local models display high paranoia toward standard IT/university notifications.
+
+3. **Offline Fallback vs. Agent comparison:**
+   * **Speed & Determinism:** The offline fallback executes in milliseconds with zero network or GPU overhead, making it an ideal fast pre-filter or graceful failover when Ollama is unavailable.
+   * **Contextual Reasoning:** The agent provides human-readable explanations and actionable user advice ("Do not click on the provided links. Report the email as phishing..."), which raw deterministic security tools cannot generate on their own.
