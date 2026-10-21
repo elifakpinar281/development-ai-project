@@ -1,0 +1,202 @@
+[
+  {
+    "id": "01-lookalike-paypal",
+    "file": "cases/01-lookalike-paypal.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Sender domain imitates PayPal."
+  },
+  {
+    "id": "02-lookalike-hamk",
+    "file": "cases/02-lookalike-hamk.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Sender domain imitates hamk.fi."
+  },
+  {
+    "id": "03-new-domain-invoice",
+    "file": "cases/03-new-domain-invoice.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Invoice email from a very newly registered domain."
+  },
+  {
+    "id": "04-campaign-first",
+    "file": "cases/04-campaign-first.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "First email of a phishing campaign."
+  },
+  {
+    "id": "05-campaign-repeat",
+    "file": "cases/05-campaign-repeat.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "Repeat of the campaign; needs case history (run with --write-history after case 04)."
+  },
+  {
+    "id": "06-prompt-injection-in-body",
+    "file": "cases/06-prompt-injection-in-body.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Instruction to the AI in the body."
+  },
+  {
+    "id": "07-prompt-injection-in-reply",
+    "file": "cases/07-prompt-injection-in-reply.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "Instruction to the AI in a reply."
+  },
+  {
+    "id": "08-suspicious-attachment",
+    "file": "cases/08-suspicious-attachment.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Dangerous attachment type."
+  },
+  {
+    "id": "09-double-file-extension",
+    "file": "cases/09-double-file-extension.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "invoice.pdf.exe style attachment."
+  },
+  {
+    "id": "10-password-protected-archive",
+    "file": "cases/10-password-protected-archive.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "Password-protected archive."
+  },
+  {
+    "id": "11-payment-fraud",
+    "file": "cases/11-payment-fraud.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "CEO payment fraud, language only."
+  },
+  {
+    "id": "12-prompt-injection-in-harmless-email",
+    "file": "cases/12-prompt-injection-in-harmless-email.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "Harmless email with an instruction to the AI. Expected verdict is suspicious, so it counts as phishing only when suspicious-as is phishing."
+  },
+  {
+    "id": "13-PDF-attachment-in-harmless-email",
+    "file": "cases/13-PDF-attachment-in-harmless-email.eml",
+    "owner": "Martina Spiegel",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Harmless email with a normal PDF."
+  },
+  {
+    "id": "14-fake-delivery",
+    "file": "cases/14-fake-delivery.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Fake parcel delivery."
+  },
+  {
+    "id": "15-legit-hamk-notice",
+    "file": "cases/15-legit-hamk-notice.eml",
+    "owner": "Martina Spiegel",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine HAMK notice."
+  },
+  {
+    "id": "16-homoglyph-sender",
+    "file": "cases/16-homoglyph-sender.eml",
+    "owner": "Martina Spiegel",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Homoglyph characters in the sender domain."
+  },
+  {
+    "id": "17-legit-subject-like-campaign",
+    "file": "cases/17-legit-subject-like-campaign.eml",
+    "owner": "Martina Spiegel",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine email whose subject resembles an earlier campaign."
+  },
+  {
+    "id": "18-legit-brand-word-in-domain",
+    "file": "cases/18-legit-brand-word-in-domain.eml",
+    "owner": "Martina Spiegel",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine email with a brand word in the domain (false positive check)."
+  },
+  {
+    "id": "29-legit-hamk",
+    "file": "cases/29-legit-hamk.eml",
+    "owner": "Riana Debre",
+    "label": "legitimate",
+    "category": "successful_case",
+    "notes": "Genuine email, SPF/DKIM/DMARC pass."
+  },
+  {
+    "id": "30-auth-spoof-moodle",
+    "file": "cases/30-auth-spoof-moodle.eml",
+    "owner": "Riana Debre",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Display name spoofing, Reply-To mismatch, SPF/DMARC fail."
+  },
+  {
+    "id": "31-attachment-double-ext",
+    "file": "cases/31-attachment-double-ext.eml",
+    "owner": "Riana Debre",
+    "label": "phishing",
+    "category": "successful_case",
+    "notes": "Double extension .pdf.exe."
+  },
+  {
+    "id": "32-deceptive-links-punycode",
+    "file": "cases/32-deceptive-links-punycode.eml",
+    "owner": "Riana Debre",
+    "label": "phishing",
+    "category": "difficult_case",
+    "notes": "Link text mismatch and punycode."
+  },
+  {
+    "id": "j01-legit-security-alert",
+    "file": "cases/j01-legit-security-alert.eml",
+    "owner": "Jaiesh Badireddy",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine, alarming-sounding GitHub security alert."
+  },
+  {
+    "id": "j02-legit-finnish-notice",
+    "file": "cases/j02-legit-finnish-notice.eml",
+    "owner": "Jaiesh Badireddy",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine Finnish-language HAMK registration reminder."
+  },
+  {
+    "id": "j05-legit-password-expiry",
+    "file": "cases/j05-legit-password-expiry.eml",
+    "owner": "Jaiesh Badireddy",
+    "label": "legitimate",
+    "category": "difficult_case",
+    "notes": "Genuine HAMK IT password-expiry notice."
+  }
+]
