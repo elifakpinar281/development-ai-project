@@ -313,13 +313,25 @@ The evaluation answers three questions:
 2. **Is the agent justified?** Three configurations are compared on the same emails.
 3. **Does it behave safely in difficult and failure situations?** Test cases with expected behaviour, recorded as pass, partial or fail.
 
+### Results at a glance
+
+On the 35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run per email with `qwen2.5:3b` on a laptop without a graphics card. A suspicious verdict counts as phishing.
+
+| Configuration | Accuracy | Recall | False-positive rate | Median time per email |
+|---|---|---|---|---|
+| Agent (SpotThePhish) | 0.857 | 1.00 | 0.50 | 75 s |
+| Fixed pipeline | 0.943 | 0.92 | 0.00 | 59 s |
+| LLM-only | 0.857 | 0.84 | 0.10 | 26 s |
+
+The checks matter for what the text alone cannot show: LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which the other two configurations found. In this run the agent did not beat the fixed pipeline. It never missed a phishing email, but it rated five genuine emails as phishing. The sample is small and every email ran once, so these differences are not reliable. The details and limitations are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
+
 ### Dataset
 The evaluation uses two data sources, because each one covers a different part of the application:
 
 | Source | Content | Used to evaluate |
 |---|---|---|
 | [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases in `evaluation/cases` | 28 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
 The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
@@ -352,11 +364,11 @@ A false negative (phishing classified as safe) is the most harmful error, so **r
 
 ### Test cases
 
-There are 38 behaviour-focused test cases with 33 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model) and [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks). They cover three categories:
+There are 43 behaviour-focused test cases with 38 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model) [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks) and [`evaluation/jaiesh_test_cases.json`](evaluation/jaiesh_test_cases.json) (emails j01 to j05, the interface and alarming but legitimate input). They cover three categories:
 
 - **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
-- **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails and a repeated campaign.
-- **Failure and adversarial cases:** prompt injection in visible text, hidden HTML, quoted replies and fake instruction blocks, a fake security banner, an attempt to waste the step budget, unavailable online services, Ollama not running, invalid model output and empty input.
+- **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails, a repeated campaign, a genuine security alert and a genuine email in Finnish.
+- **Failure and adversarial cases:** prompt injection in visible text, hidden HTML, quoted replies and fake instruction blocks, a fake security banner, an attempt to waste the step budget, unavailable online services, Ollama not running, invalid model output, empty input and text that is not an email.
 
 Each case records the expected behaviour, grading rules, the actual result and a status (pass, partial or fail). Failure cases that cannot be produced with an email, such as invalid model output, are covered by automated tests, which are named in each entry.
 
