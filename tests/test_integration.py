@@ -58,7 +58,7 @@ def test_agent_run_on_a_real_eml_file():
         decide("check_email_authentication", reason="Check whether the sender is real."),
         decide(None),
         final("phishing", 85, evidence=[
-            {"source": "tool", "observation_id": 2, "quote": None, "claim": "The link was checked."},
+            {"source": "tool", "observation_id": 3, "quote": None, "claim": "The link was checked."},
             {"source": "email_text", "observation_id": None,
              "quote": "confirm your identity within 24 hours", "claim": "Time pressure."},
         ]),
@@ -101,7 +101,8 @@ def test_ollama_down_uses_the_offline_checks_of_person_1_and_3():
     assert result.verdict.is_fallback is True
     assert result.verdict.verdict == "phishing"
     ran = set(result.verdict.tools_run)
-    assert {"check_email_authentication", "analyze_links", "inspect_attachments", "scan_prompt_injection"} <= ran
+    assert {"check_email_authentication", "analyze_links", "inspect_attachments",
+            "scan_prompt_injection", "scan_payment_fraud"} <= ran
     assert "is Ollama running?" in result.warnings[0]
 
 
@@ -117,7 +118,7 @@ def test_model_saying_safe_is_overruled_by_a_high_risk_check():
         decide("inspect_attachments"),
         decide(None),
         final("likely safe", 10, evidence=[
-            {"source": "tool", "observation_id": 2, "quote": None, "claim": "Attachment checked."}]),
+            {"source": "tool", "observation_id": 3, "quote": None, "claim": "Attachment checked."}]),
     ])
     result = service.analyze(RICH_PHISHING)
     assert result.verdict.verdict == "suspicious"
@@ -146,3 +147,20 @@ def test_empty_input_is_rejected_before_the_model(text):
     service, model = build([])
     assert service.analyze(text).status == AnalysisStatus.REJECTED
     assert model.calls == []
+
+def test_gift_card_scam_is_at_least_suspicious_even_if_the_model_says_safe():
+    service, _ = build([
+        decide(None),
+        final("likely safe", 20, evidence=[
+            {"source": "tool", "observation_id": 2, "quote": None, "claim": "Scan ran."}]),
+    ])
+    result = service.analyze(read_case("25-gift-card-no-indicators.eml"))
+    assert result.verdict.verdict == "suspicious"
+    assert "payment_fraud" in result.verdict.safety_rules_applied
+
+
+def test_genuine_password_reset_has_no_fraud_warning():
+    service, _ = build([ModelUnavailableError("Ollama down")])
+    result = service.analyze(read_case("23-legit-password-reset.eml"))
+    assert result.verdict.verdict == "likely safe"
+    assert "payment_fraud" not in result.verdict.safety_rules_applied

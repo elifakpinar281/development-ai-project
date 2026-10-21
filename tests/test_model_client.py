@@ -116,3 +116,9 @@ def test_other_bad_requests_are_not_retried():
     fake = FakeOllama(error=ollama.ResponseError("invalid format schema", 400))
     with pytest.raises(ModelUnavailableError):
         client_with(fake).chat(MESSAGES)
+
+
+def test_model_not_found_message_names_the_model():
+    error = ModelNotFoundError("missing", model_name="qwen3:8b")
+    assert "ollama pull qwen3:8b" in error.user_message
+    assert "qwen3:8b" not in ModelNotFoundError("missing").user_message

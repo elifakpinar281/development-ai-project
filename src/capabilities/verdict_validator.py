@@ -88,11 +88,21 @@ class VerdictValidator:
             action = DEFAULT_ACTIONS[outcome.verdict]
 
         evidence: list[str] = []
+        shown_claims: list[str] = []
+        shown_quotes: list[str] = []
         for item in answer.evidence:
             if item.source == "tool" and item.observation_id in by_id:
+                key = f"{item.observation_id}:{_normalize(item.claim)}"
+                if key in shown_claims:
+                    continue
+                shown_claims.append(key)
                 tool_name = by_id[item.observation_id].result.tool_name
                 evidence.append(f"[#{item.observation_id} {tool_name}] {item.claim}")
             else:
+                quote = _normalize(item.quote or "")
+                if _is_repeated_quote(quote, shown_quotes):
+                    continue
+                shown_quotes.append(quote)
                 evidence.append(f"[email text] \"{item.quote}\": {item.claim}")
 
         rule_ids = []
@@ -160,3 +170,10 @@ def _searchable_email_text(email: ParsedEmail) -> str:
     if sender:
         parts.append(sender)
     return _normalize(" \n ".join(parts))
+
+
+def _is_repeated_quote(quote: str, shown_quotes: list[str]) -> bool:
+    for shown in shown_quotes:
+        if quote in shown:
+            return True
+    return False

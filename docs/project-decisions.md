@@ -24,20 +24,22 @@ This log records the important technical decisions of the team. Every decision f
 ## Decision 1 — Model selection
 
 **Decision:**
-We use `qwen3:8b`, running locally through Ollama. `qwen3:4b` is the fallback for computers with less memory. The model is set through the `MODEL_NAME` environment variable, so switching requires no code changes.
+We use `qwen2.5:3b`, running locally through Ollama. The model is set through the `MODEL_NAME` environment variable, so `qwen3:8b` can be used instead without any code change.
 
 **Alternatives considered:**
 - Cloud-hosted LLM APIs (e.g. OpenAI, Anthropic, Gemini)
-- Smaller local model (`qwen3:4b`) as the main model
+- `qwen3:8b` as the main model (our first choice)
 - No LLM at all, only rule-based checks
 
 **Why we chose this:**
 - **Privacy:** Emails can contain personal and confidential data. Running the model locally keeps the email and its analysis on the user's machine instead of sending it to a third-party API.
-- **Tool calling and structured output:** Our agent loop needs reliable JSON actions and a schema-conformant final report. Qwen3 supports both in Ollama.
-- **Reasoning capacity:** The agent has to combine several pieces of evidence instead of classifying in one step. The 8B model has more capacity for this than smaller models and still runs on typical laptops with 16 GB RAM.
-- **Configurability:** Because the model is set via environment variables, we can compare `qwen3:8b` and `qwen3:4b` in the evaluation without changing the application.
+- **Waiting time:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, because the agent needs several model calls. A user who wants to know whether to click a link will not wait that long. `qwen2.5:3b` needs about 60 seconds for the same analysis.
+- **The application does the safety work:** The facts come from deterministic tools, every decision is validated, every evidence item must be grounded and the safety rules cannot be overridden. The model mainly chooses checks, reads the language of the email and explains the result, so a small model is sufficient. The larger model still judges difficult emails better, so the choice is a trade-off between speed and accuracy (see Evaluation below).
+- **Structured output:** Our agent loop needs reliable JSON decisions and a schema-conformant final report. Qwen2.5 and Qwen3 both support structured output in Ollama.
+- **Configurability:** Because the model is set via environment variables, we can compare `qwen2.5:3b` and `qwen3:8b` without changing the application.
+- **Evaluation:** We ran our test emails with both models and the same code. `qwen3:8b` passed 9 of 10 without a false alarm, `qwen2.5:3b` 6 of 10, but the 8B model was about 1.5 to 2 times slower. The 3B model stays the default for laptops without a graphics card, and `qwen3:8b` is recommended when the hardware allows it.
 
-Trade-off: a local 8B model can produce invalid actions or miss subtle manipulation. We limit this with schema validation, a step limit and a fallback pipeline (see Decision 3).
+Trade-off: a small model can produce invalid actions or miss subtle manipulation more often than a larger one. We limit this with schema validation, a step limit, grounding checks and the offline fallback (see Decisions 10 to 13).
 
 ---
 
@@ -228,10 +230,10 @@ The two online tools (domain age and URL reputation) can run in three modes, set
 ## Decision 9 - Structured output, temperature 0 and thinking off
 
 **Decision:**
-The application talks to the model through structured output in Ollama. Every request contains a JSON schema, AgentDecision for each step and ModelVerdict for the final answer, and Ollama limits the reply to that schema. The schema for a decision lists the real tool names, so the model cannot even write an unknown name. We do not use the native tool calling format of Ollama. The settings are temperature 0, Qwen3 thinking off, a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in .env. All access to Ollama goes through one class, OllamaModelClient.
+The application talks to the model through structured output in Ollama. Every request contains a JSON schema, AgentDecision for each step and ModelVerdict for the final answer, and Ollama limits the reply to that schema. The schema for a decision lists the real tool names, so the model cannot even write an unknown name. The schema for the verdict allows only two shapes of evidence. A tool item must carry the number of an observation that actually ran, and an email item must carry a quote of at least four characters. We added this after our evaluation showed that the 3B model often wrote evidence items without a quote or without an observation number (see evaluation_results.md). We do not use the native tool calling format of Ollama. The settings are temperature 0, thinking off for Qwen3 models (Qwen2.5 has no thinking mode), a context window of 8192 tokens and a timeout of 120 seconds per call. All settings can be changed in .env. All access to Ollama goes through one class, OllamaModelClient.
 
 **Alternatives considered:**
-With native tool calling, the model returns tool calls, but the final verdict is free text. Small local models sometimes write tool calls into the text instead, so we would need two parsing paths. JSON requested only in the prompt, without a schema, is simpler, but an 8B model then produces invalid JSON much more often. Thinking mode improves reasoning on hard cases, but it makes every step several times slower, and an analysis needs several model calls.
+With native tool calling, the model returns tool calls, but the final verdict is free text. Small local models sometimes write tool calls into the text instead, so we would need two parsing paths. JSON requested only in the prompt, without a schema, is simpler, but a small local model then produces invalid JSON much more often. Thinking mode improves reasoning on hard cases, but it makes every step several times slower, and an analysis needs several model calls.
 
 **Why we chose this**
 The schema prevents most format errors before they happen. The application still validates every answer with Pydantic, because a schema cannot check meaning. There is only one parsing path for steps and for the final answer. Temperature 0 makes repeated runs nearly identical, which keeps the evaluation fair. The agent already writes a short reason for each step, which gives a visible trace without thinking mode. Because the rest of the application depends only on the ModelClient interface, the tests can use a scripted fake model.
@@ -246,7 +248,7 @@ Without thinking mode, the model may miss subtle cases that longer reasoning wou
 **Decision:**
 The AgentAnalyzer runs a loop in the ReAct style. The model decides and the application acts. The flowchart is in section 4 of architecture.md.
 
-1. The application runs the prompt injection scan, which becomes observation 1.
+1. The application runs the prompt injection scan and the payment fraud scan, which become observations 1 and 2.
 2. In each step, the model returns either a tool call with its arguments and a one-sentence reason, or the signal to finish.
 3. The application checks the call (Decision 11), runs it and returns the result as a numbered observation.
 4. After finishing, or when the budget is used up, the model writes the final verdict, which is validated (Decision 12).
@@ -297,7 +299,7 @@ These checks reduce the risk of prompt injection leading to unauthorised tool ca
 ## Decision 12 - Grounded evidence, score bands and safety rules
 
 **Decision:**
-The final answer of the model must match the ModelVerdict schema. The VerdictValidator then checks every evidence item. An item that cites a tool must name an observation of this run with the status success or warning, so an unavailable check cannot be cited. An item that quotes the email must appear word for word in the subject or body. Case, spacing and typographic quotes are ignored in this comparison.
+The final answer of the model must match the ModelVerdict schema. The VerdictValidator then checks every evidence item. An item that cites a tool must name an observation of this run with the status success or warning, so an unavailable check cannot be cited. An item that quotes the email must appear word for word in the subject or body. Case, spacing and typographic quotes are ignored in this comparison. Our evaluation showed that the 3B model missed a gift card scam from a real colleague address, because all technical checks were clean. A rule in the prompt fixed this case but made the model flag a genuine password reset, even after we narrowed the rule. We therefore moved this knowledge out of the prompt into a deterministic scan, scan_payment_fraud, and the safety rule payment_fraud. The scan only fires when a request for money, gift cards, bank details or codes appears together with urgency, secrecy or an excuse why the sender cannot be called, so a password reset or a registration deadline does not trigger it. Because the scan was designed after looking at our own test cases, we checked it on data it was not built for: it flagged none of the 1,000 legitimate Zenodo texts and found the independent CEO fraud case of Person 3 (see evaluation_results.md). The model still rated the password reset as phishing after this change, which shows that this error comes from the model's own judgement and not from the rule. Repeated evidence items are removed before the result is shown.
 
 After that, the fixed rules in src/capabilities/verdict_policy.py are applied. The score is moved into the band of the verdict. Likely safe covers 0 to 39, suspicious covers 40 to 69 and phishing covers 70 to 100. The verdict wins, because it is what the user acts on. The safety rules can only raise a verdict and never lower it.
 
@@ -306,6 +308,7 @@ After that, the fixed rules in src/capabilities/verdict_policy.py are applied. T
 | url_listed_as_malicious | The reputation service lists a link | Phishing with risk 90 |
 | known_phishing_campaign | The same sender or subject was judged phishing before | Suspicious with risk 60 |
 | prompt_injection | The email contains instructions aimed at AI tools | Suspicious with risk 50 |
+| payment_fraud | The email asks for money, gift cards, bank details or codes under pressure or in secret | Suspicious with risk 60 |
 | high_risk_finding | A check returned a warning with risk 80 or more | Suspicious with risk 50 |
 
 The rules look at all tool results of the run and not only at the cited ones. The model therefore cannot avoid a rule by leaving a finding out. When a rule raises the verdict, the explanation says so, and the recommended action is replaced with the standard action for the new verdict.
@@ -327,7 +330,7 @@ The safety rules can raise a legitimate email to suspicious when one tool gives 
 **Decision:**
 OllamaModelClient translates every Ollama or network error into our own exceptions. ModelUnavailableError means that Ollama cannot be reached or returned a server error. ModelNotFoundError means that the model is not installed. ModelTimeoutError means that a call took too long. The agent raises InvalidModelOutputError or VerdictValidationError when a corrected answer is still invalid. All five inherit from ModelError.
 
-The AnalysisService catches ModelError in one place and runs the OfflineAnalyzer instead. The fallback runs every check that needs neither model nor network. These are the prompt injection scan, the lookalike check and the email checks of Person 1. The score is the highest warning plus 10 for every further warning, and the same safety rules are applied. The result is labelled as a fallback, and the warning tells the user what went wrong.
+The AnalysisService catches ModelError in one place and runs the OfflineAnalyzer instead. The fallback runs every check that needs neither model nor network. These are the prompt injection scan, the payment fraud scan, the lookalike check and the email checks of Person 1. The score is the highest warning plus 10 for every further warning, and the same safety rules are applied. The result is labelled as a fallback, and the warning tells the user what went wrong.
 
 **Rules:**
 An exception class only exists if some code catches it specifically. The agent catches InvalidToolCallError. The service catches ModelError and InvalidEmailInputError. The tool_boundary decorator catches ToolError (Decision 6).
@@ -364,39 +367,40 @@ Differences in the results come only from how evidence is collected. The shared 
 **Trade-offs**
 A full run of all three configurations takes a long time on a computer without a graphics card. We therefore evaluate a sample of the Zenodo dataset and not all 2000 emails. A suspicious verdict counts as phishing by default, because the user is then warned. The option suspicious-as legitimate shows the stricter view.
 
+
 ## Testing approach for the agent, model client and service (Elif)
- 
+
 My part is tested on two levels. Automated tests check every rule of the agent without a model. Hand-crafted cases check how the real model behaves in the situations that are most risky for an AI analyser.
- 
+
 ### Automated tests
- 
+
 All tests run with pytest and need neither Ollama, the network nor the database. A scripted fake model and fake tools are defined in tests/fakes.py, so every rule can be tested on its own and with exactly the model answer that is needed.
- 
+
 The model client tests check the settings sent to Ollama and the translation of every error type into our own exceptions. One test uses the real Ollama library against a port where nothing is listening, so the case that Ollama is not running is tested for real.
- 
+
 The agent tests cover a normal run, finishing without tools, unknown tools, wrong arguments, domains that are not in the email and repeated calls. They also cover unavailable and crashing tools and the step limit. Further tests check invalid JSON and invented evidence that are either corrected or fail twice. The last group checks that prompt injection cannot make an email safe and that an email cannot close its own data block.
- 
-The registry, validator and prompt tests check the argument rules, every grounding rule, the score bands and every safety rule. The service tests check rejected input, every switch to the fallback and unexpected bugs. The integration tests use the real factory with the parser and email checks and the lookalike check. Only the model is scripted.
- 
+
+The registry, validator and prompt tests check the argument rules, every grounding rule, the score bands and every safety rule. The service tests check rejected input, every switch to the fallback and unexpected bugs. The integration tests use the real factory with the parser and email checks of Person 1 and the lookalike check of Person 3. Only the model is scripted.
+
 ### Hand-crafted cases
- 
- My twelve cases in evaluation/elif_test_cases.json therefore focus on the agent itself. They ask whether the model can be manipulated, whether it stays within its limits and whether it adds value where the tools find nothing.
- 
+
+The cases of Person 3 already cover lookalike domains, domain age, campaigns, attachments, payment fraud, failing services and simple prompt injection. My twelve cases in evaluation/elif_test_cases.json therefore focus on the agent itself. They ask whether the model can be manipulated, whether it stays within its limits and whether it adds value where the tools find nothing.
+
 | Case | What it tests |
 |---|---|
-| elif-1 (19) | An instruction to the AI hidden in an HTML comment and an invisible block |
-| elif-02 (20)| A fake end of the data block followed by new instructions |
-| elif-03 (21) | A polite checklist that tries to waste the step budget on twelve unrelated domains |
-| elif-04 (22) | A legitimate course announcement about AI, as a false positive check for the injection scan |
-| elif-05 (23) | A legitimate password reset with alarming wording |
-| elif-06 (24) | A phishing body pasted without any headers |
-| elif-07 (25) | A gift card scam from a real colleague address without any link, which only the language analysis can detect |
-| elif-08 (26) | A phishing email in Finnish |
-| elif-09 (27) | A phishing link at the end of a long text that is cut off in the prompt |
-| elif-10 (28) | A fake security banner in the body that claims SPF and DKIM passed, while the real headers failed |
-| elif-11 (29) | Ollama not running or the model not installed |
-| elif-12 (30) | Invalid model output, unknown tools, foreign domains, invented evidence and invalid input |
- 
-Cases elif-01 to elif-10 are emails in evaluation/cases and are run with the real model. Each entry contains grading rules in the same format as the cases of Person 3, together with the result of the offline fallback. Cases elif-11 and elif-12 are failure situations that are covered by automated tests, which are named in each entry.
- 
-Two cases show limits on purpose. In elif-03 the checklist contains no typical injection phrase, so the pattern scan does not detect it, and only the step budget protects the agent. In elif-07 the offline fallback rates the email likely safe, because no tool finds anything and the fallback cannot judge language. This case shows why the language model is needed. The results of the runs are summarised in evaluation/evaluation_results.md.
+| case-19 | An instruction to the AI hidden in an HTML comment and an invisible block |
+| case-20 | A fake end of the data block followed by new instructions |
+| case-21 | A polite checklist that tries to waste the step budget on twelve unrelated domains |
+| case-22 | A legitimate course announcement about AI, as a false positive check for the injection scan |
+| case-23 | A legitimate password reset with alarming wording |
+| case-24 | A phishing body pasted without any headers |
+| case-25 | A gift card scam from a real colleague address without any link, which only the language analysis can detect |
+| case-26 | A phishing email in Finnish |
+| case-27 | A phishing link at the end of a long text that is cut off in the prompt |
+| case-28 | A fake security banner in the body that claims SPF and DKIM passed, while the real headers failed |
+| case-29 | Ollama not running or the model not installed |
+| case-30 | Invalid model output, unknown tools, foreign domains, invented evidence and invalid input |
+
+Cases 19 to 28 are emails in evaluation/cases and are run with the real model. Each entry contains grading rules in the same format as the cases of Person 3, together with the result of the offline fallback. Cases 29 and 30 are failure situations that are covered by automated tests, which are named in each entry.
+
+Two cases show limits on purpose. In case-21 the checklist contains no typical injection phrase, so the pattern scan does not detect it, and only the step budget protects the agent. In case-25 the offline fallback rates the email likely safe, because no tool finds anything and the fallback cannot judge language. This case shows why the language model is needed. The results of the runs are summarised in evaluation/evaluation_results.md.

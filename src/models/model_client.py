@@ -62,7 +62,8 @@ class OllamaModelClient(ModelClient):
         except ollama.ResponseError as error:
             if error.status_code == 404:
                 raise ModelNotFoundError(
-                    f"Model '{self.model_name}' is not installed in Ollama at {self.base_url}."
+                    f"Model '{self.model_name}' is not installed in Ollama at {self.base_url}.",
+                    model_name=self.model_name,
                 ) from error
             raise ModelUnavailableError(
                 f"Ollama returned HTTP {error.status_code}: {error.error}"
