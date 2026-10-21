@@ -9,6 +9,18 @@ DOMAIN_AGES = {
     "invoice-portal-ab12.example": 2,
     "parcel-notice-center.example": 1,
     "delivery-update-desk.example": 2,
+    "hamk-account-check.example": 4,
+    "hamk-support-portal.example": 6,
+    "invoice-review.example": 12,
+    "shipment-tracking.example": 9,
+    "staff-documents.example": 3,
+    "company-finance-approval.example": 2,
+    "project-updates.example": 1800,
+    "lecture-notes.example": 900,
+    "lecture-office.example": 900,
+    "hamk.fi": 9000,
+    "parcel-hub-notice.example": 1,
+    "xn--pypal-4ve.example": 2,
 }
 MALICIOUS_URLS = {"http://paypa1.example/verify"}
 CLEAN_URLS = {
@@ -16,13 +28,21 @@ CLEAN_URLS = {
     "http://invoice-portal-ab12.example/pay/20931",
     "http://parcel-notice-center.example/confirm?id=8841",
     "http://delivery-update-desk.example/confirm?id=5530",
+    "http://hamk-account-check.example/verify",
+    "http://hamk-support-portal.example/reactivate",
+    "http://company-finance-approval.example/transfer",
+    "http://parcel-hub-notice.example/pay?ref=77310",
+    "http://xn--pypal-4ve.example/signin",
+    "https://www.hamk.fi/studies/",
 }
 
 
 def _age_result(domain: str, days: int) -> ToolResult:
-    risk = 90 if days < 7 else 75 if days < 30 else 45
+    # same thresholds as domain_tools.check_domain_age
+    risk = 90 if days < 7 else 75 if days < 30 else 45 if days < 90 else 10 if days < 365 else 0
     return ToolResult(
-        tool_name="check_domain_age", status="warning", risk_score=risk, is_offline=False,
+        tool_name="check_domain_age", status="warning" if risk >= 40 else "success",
+        risk_score=risk, is_offline=False,
         finding=f"The domain was registered approximately {days} days ago.",
         evidence=["Registration date: seeded for evaluation", f"Domain age: {days} days"],
         details={"domain": domain, "age_days": days, "registered": True})

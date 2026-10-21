@@ -1,0 +1,23 @@
+From: Accounts Payable <accounts@invoice-review.example>
+To: finance@company-test.example
+Subject: Updated invoice - action required
+Date: Thu, 15 Oct 2026 10:05:00 +0000
+Message-ID: <p3-08@invoice-review.example>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="testboundary08"
+
+--testboundary08
+Content-Type: text/plain; charset="utf-8"
+
+Please review the attached invoice and enable editing and
+macros if prompted to view the full details.
+
+--testboundary08
+Content-Type: application/vnd.ms-word.document.macroEnabled.12;
+ name="Invoice_20931.docm"
+Content-Disposition: attachment; filename="Invoice_20931.docm"
+Content-Transfer-Encoding: base64
+
+UEhJU0hJTkdfVEVTVF9BVFRBQ0hNRU5UX05PVF9FWEVDVVRBQkxF
+
+--testboundary08--

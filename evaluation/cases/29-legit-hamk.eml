@@ -1,0 +1,35 @@
+From: HAMK IT Services <it-services@hamk.fi>
+To: student@hamk-test.example
+Subject: Scheduled Maintenance Notification
+Date: Mon, 20 Oct 2026 09:00:00 +0300
+Message-ID: <p1-01@hamk.fi>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="boundary-legit-001"
+Authentication-Results: mx.hamk.fi;
+ dkim=pass header.i=@hamk.fi;
+ spf=pass smtp.mailfrom=it-services@hamk.fi;
+ dmarc=pass action=none header.from=hamk.fi
+Received-SPF: pass (hamk.fi: domain of it-services@hamk.fi designates 193.166.0.1 as permitted sender)
+
+--boundary-legit-001
+Content-Type: text/plain; charset="utf-8"
+
+Hello Students,
+
+The student portal will undergo scheduled maintenance tonight at 23:00.
+For more details, visit: https://www.hamk.fi/maintenance
+
+Best regards,
+HAMK IT Services
+--boundary-legit-001
+Content-Type: text/html; charset="utf-8"
+
+<html>
+<body>
+<p>Hello Students,</p>
+<p>The student portal will undergo scheduled maintenance tonight at 23:00.</p>
+<p>For more details, visit: <a href="https://www.hamk.fi/maintenance">https://www.hamk.fi/maintenance</a></p>
+<p>Best regards,<br>HAMK IT Services</p>
+</body>
+</html>
+--boundary-legit-001--

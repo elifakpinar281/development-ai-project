@@ -31,7 +31,7 @@ class FakeOllama:
 
 def client_with(fake):
     return OllamaModelClient(
-        base_url="http://localhost:11434", model_name="qwen3:8b", timeout_seconds=5,
+        base_url="http://localhost:11434", model_name="qwen2.5:3b", timeout_seconds=5,
         temperature=0.0, context_tokens=4096, think=False, ollama_client=fake,
     )
 
@@ -42,7 +42,7 @@ def test_returns_reply_and_sends_settings():
     text = client_with(fake).chat(MESSAGES, response_schema=schema)
 
     assert text == '{"ok": true}'
-    assert fake.kwargs["model"] == "qwen3:8b"
+    assert fake.kwargs["model"] == "qwen2.5:3b"
     assert fake.kwargs["messages"] == [{"role": "user", "content": "hello"}]
     assert fake.kwargs["format"] == schema
     assert fake.kwargs["think"] is False
@@ -59,7 +59,7 @@ def test_empty_reply_becomes_empty_string():
 
 
 @pytest.mark.parametrize("error,expected", [
-    (ollama.ResponseError("model 'qwen3:8b' not found", 404), ModelNotFoundError),
+    (ollama.ResponseError("model 'qwen2.5:3b' not found", 404), ModelNotFoundError),
     (ollama.ResponseError("out of memory", 500), ModelUnavailableError),
     (ConnectionError("Failed to connect to Ollama"), ModelUnavailableError),
     (httpx.ReadTimeout("timed out"), ModelTimeoutError),
@@ -85,7 +85,7 @@ def _free_port():
 
 def test_real_ollama_client_with_no_server_running():
     client = OllamaModelClient(
-        base_url=f"http://127.0.0.1:{_free_port()}", model_name="qwen3:8b", timeout_seconds=3,
+        base_url=f"http://127.0.0.1:{_free_port()}", model_name="qwen2.5:3b", timeout_seconds=3,
     )
     with pytest.raises(ModelUnavailableError) as caught:
         client.chat(MESSAGES)

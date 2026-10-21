@@ -1,0 +1,16 @@
+From: Parcel Service <noreply@parcel-hub-notice.example>
+To: staff1@hamk-test.example
+Subject: Your package is on hold - customs fee due
+Date: Fri, 16 Oct 2026 09:30:00 +0000
+Message-ID: <p3-14@parcel-hub-notice.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+
+Your package is on hold at our depot.
+
+Pay a small customs fee within 24 hours, otherwise the package will
+be returned to the sender.
+
+http://parcel-hub-notice.example/pay?ref=77310
+
+Parcel Delivery Team

@@ -1,0 +1,16 @@
+From: Security Alert <security@nordea-notify.example>
+To: student@hamk-test.example
+Subject: Suspicious activity on your account
+Date: Mon, 20 Oct 2026 12:00:00 +0300
+Message-ID: <p1-04@nordea-notify.example>
+MIME-Version: 1.0
+Content-Type: text/html; charset="utf-8"
+
+<html>
+<body>
+<p>Dear Customer,</p>
+<p>We detected an unauthorized sign-in to your online banking.</p>
+<p>Confirm your identity here: <a href="http://192.168.1.50/nordea-login">https://www.nordea.fi/login</a></p>
+<p>Backup verification portal: <a href="http://xn--norda-qqa.fi/secure">http://xn--norda-qqa.fi/secure</a></p>
+</body>
+</html>

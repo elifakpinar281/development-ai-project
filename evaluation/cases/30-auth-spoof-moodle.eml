@@ -1,0 +1,16 @@
+From: HAMK Helpdesk <admin-support@gmail.com>
+Reply-To: credential-collector@phishingsite.org
+To: student@hamk-test.example
+Subject: Urgent: Verify your University Account
+Date: Mon, 20 Oct 2026 10:15:00 +0300
+Message-ID: <p1-02@evil-attacker-mail.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+Authentication-Results: mx.hamk.fi;
+ spf=fail (sender IP is not authorized);
+ dkim=fail;
+ dmarc=fail action=reject header.from=evil-attacker-mail.com
+Received-SPF: fail (domain does not authorize sender IP)
+
+URGENT: Your university access will be suspended within 24 hours.
+Please reply immediately to this email with your username and password to verify your account.

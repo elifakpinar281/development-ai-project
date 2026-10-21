@@ -1,0 +1,47 @@
+[
+  {
+    "id": "29",
+    "owner": "Riana Debre",
+    "category": "successful_case",
+    "input": "evaluation/cases/p1-01-legit-hamk.eml",
+    "expected_behavior": "check_email_authentication verifies SPF, DKIM, DMARC as pass. analyze_links and inspect_attachments find zero threats. Verdict is 'likely safe' with risk score < 20.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "30",
+    "owner": "Riana Debre",
+    "category": "successful_case",
+    "input": "evaluation/cases/p1-02-auth-spoof-moodle.eml",
+    "expected_behavior": "check_email_authentication flags display name spoofing ('helpdesk' on gmail.com), Reply-To domain mismatch, and SPF/DMARC failure. Risk score >= 70, verdict 'phishing'.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "31",
+    "owner": "Riana Debre",
+    "category": "successful_case",
+    "input": "evaluation/cases/p1-03-attachment-double-ext.eml",
+    "expected_behavior": "inspect_attachments identifies double extension '.pdf.exe' and executable payload. Tool flags risk >= 90. Verdict is 'phishing'.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "32",
+    "owner": "Riana Debre",
+    "category": "difficult_case",
+    "input": "evaluation/cases/p1-04-deceptive-links-punycode.eml",
+    "expected_behavior": "analyze_links flags anchor text mismatch (nordea.fi vs raw IP 192.168.1.50) and Punycode homograph (xn--norda-qqa.fi). Verdict is 'phishing'.",
+    "actual_result": "",
+    "status": "pending"
+  },
+  {
+    "id": "33",
+    "owner": "Riana Debre",
+    "category": "failure_case",
+    "input": "evaluation/cases/p1-05-headerless-raw-body.txt",
+    "expected_behavior": "Parser handles raw pasted text gracefully (has_headers=False). check_email_authentication returns warning for missing headers. analyze_links catches bit.ly shortener.",
+    "actual_result": "",
+    "status": "pending"
+  }
+]
