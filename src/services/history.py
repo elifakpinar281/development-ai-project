@@ -323,3 +323,14 @@ _history = SessionHistory()
  
 def session_history() -> SessionHistory:
     return _history
+
+
+def record_analysis(text: str, result, model_name: str) -> HistoryEntry:
+    """Store a finished analysis in the session history (parsing stays in the service layer)."""
+    from src.email_parser import parse_email
+
+    try:
+        email = parse_email(text)
+    except Exception:
+        email = ParsedEmail(raw_text=text, body_plain=text, has_headers=False)
+    return session_history().add(email, result, model_name)
