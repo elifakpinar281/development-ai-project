@@ -1,4 +1,4 @@
-"""Evaluation runner for the domain checks and the case history (Person 3).
+"""Evaluation runner for the domain checks and the case history (Martina).
 
 Runs every case in martina_test_cases.json several times through the real
 AnalysisService (agent + MCP domain server + PostgreSQL) and grades each trial
@@ -51,8 +51,19 @@ from src.schemas.agent import AnalysisResult, AnalysisStatus
 from src.schemas.responses import Verdict
 import src.services.service_factory as factory
 
+class _ReasonCollector(logging.Handler):
+    def __init__(self) -> None:
+        super().__init__(logging.WARNING)
+        self.reasons: list[str] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.reasons.append(record.getMessage())
+
+
+COLLECTOR = _ReasonCollector()
+
 BAD_DB = "postgresql://spotthephish:spotthephish@127.0.0.1:1/none"
-LEAK_MARKERS = ("Traceback", "psycopg", "OperationalError", "Exception", "postgresql://", "key=")
+LEAK_MARKERS = ("Traceback", "psycopg", "OperationalError", "Exception", "postgresql://", "key=", "x-goog-api-key", "AIza")
 CASES_FILE = Path(__file__).with_name("martina_test_cases.json")
 RESULTS_FILE = Path(__file__).with_name("results") / "martina_results.json"
 
@@ -113,6 +124,12 @@ def grade(g: dict, result: AnalysisResult, new_rows: int) -> dict[str, bool]:
             checks[f"evidence_cites:{tool}"] = any(f" {tool}]" in item for item in verdict.evidence)
         for tool in g.get("unavailable_includes", []):
             checks[f"unavailable:{tool}"] = tool in verdict.unavailable_tools
+    if g.get("unavailable_if_called"):
+        called = [o.result for o in result.observations if o.result.tool_name in g["unavailable_if_called"]]
+        checks["called_online_checks_unavailable"] = all(r.status == "unavailable" for r in called)
+        if called:
+            checks["warning:Some checks could not run"] = any(
+                "Some checks could not run" in w for w in result.warnings)
     observed = [(o.result.tool_name, o.result.status) for o in result.observations]
     for tool, status in g.get("require_observations", []):
         checks[f"observed:{tool}={status}"] = (tool, status) in observed
@@ -138,12 +155,22 @@ def run_trial(case: dict, number: int) -> dict:
     if scenario == "db_down":
         config.database_url = BAD_DB
     try:
+        COLLECTOR.reasons.clear()
         result = service.analyze(raw)
     finally:
         config.database_url = original_url
     new_rows = history_rows() - before
     checks = grade(g, result, new_rows)
     verdict = result.verdict
+    g_ = case["grading"]
+    if verdict is None:
+        wrong = None
+    elif "verdict_in" in g_:
+        wrong = verdict.verdict not in g_["verdict_in"]
+    elif g_.get("phishing_email"):
+        wrong = verdict.verdict == "likely safe"
+    else:
+        wrong = None
     return {
         "case": case["id"], "trial": number, "status": result.status.value,
         "valid_for_model_eval": result.status == AnalysisStatus.COMPLETED,
@@ -154,9 +181,22 @@ def run_trial(case: dict, number: int) -> dict:
         "model_calls": result.model_calls, "duration_ms": result.duration_ms,
         "unavailable_tools": verdict.unavailable_tools if verdict else [],
         "warnings": result.warnings, "checks": checks,
+        "fallback_reason": COLLECTOR.reasons[-1] if COLLECTOR.reasons else "",
         "failed_checks": [name for name, ok in checks.items() if not ok],
         "passed": all(checks.values()),
+        "wrong_verdict": wrong,
+        "explanation": verdict.explanation if verdict else "",
     }
+
+def print_wrong_verdicts(trials: list[dict]) -> None:
+    valid = [t for t in trials if t["valid_for_model_eval"]]
+    fallback = [t for t in trials if not t["valid_for_model_eval"]]
+    count = lambda rows: sum(1 for t in rows if t.get("wrong_verdict"))
+    print(f"\nWrong verdict: model runs {count(valid)} of {len(valid)}, "
+          f"fallback runs {count(fallback)} of {len(fallback)}")
+    for t in trials:
+        if t.get("wrong_verdict"):
+            print(f"  {t['case']} run {t['trial']} ({t['status']}): {t['verdict']}")
 
 
 def summarise(cases: list[dict], trials: list[dict]) -> list[dict]:
@@ -221,6 +261,27 @@ def ollama_reachable() -> bool:
     except httpx.HTTPError:
         return False
 
+def print_totals(trials: list[dict], cases: list[dict]) -> None:
+    category = {c["id"]: c["category"] for c in cases}
+    stats: dict[str, list[int]] = {}
+    for t in trials:
+        s = stats.setdefault(category[t["case"]], [0, 0, 0]) # valid, passed, fallback
+        if t["valid_for_model_eval"]:
+            s[0] += 1
+            s[1] += int(t["passed"])
+        else:
+            s[2] += 1
+    print("\n| Category | Valid runs | Passed | Failed | Pass rate | Fallback runs |")
+    print("|---|---:|---:|---:|---:|---:|")
+    total = [0, 0, 0]
+    for name, (valid, passed, fb) in sorted(stats.items()):
+        rate = f"{100 * passed / valid:.0f}%" if valid else "n/a"
+        print(f"| {name} | {valid} | {passed} | {valid - passed} | {rate} | {fb} |")
+        total = [a + b for a, b in zip(total, (valid, passed, fb))]
+    valid, passed, fb = total
+    rate = f"{100 * passed / valid:.0f}%" if valid else "n/a"
+    print(f"| **All** | {valid} | {passed} | {valid - passed} | {rate} | {fb} |")
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -231,7 +292,12 @@ def main() -> None:
     parser.add_argument("--write-cases", action="store_true", help="write actual_result and status into the cases file")
     parser.add_argument("--require-model", action="store_true", help="abort when Ollama is not reachable")
     args = parser.parse_args()
-    logging.disable(logging.CRITICAL)
+    if args.write_cases and args.only:
+        sys.exit("--write-cases cannot be combined with --only: the cases file must come from one complete run")
+    logging.getLogger().addHandler(logging.NullHandler())
+    ai_logger = logging.getLogger("src.services.ai_service")
+    ai_logger.addHandler(COLLECTOR)
+    ai_logger.propagate = False
 
     if not ollama_reachable():
         message = f"Ollama is not reachable at {config.ollama_base_url}: every run would use the offline fallback."
@@ -261,6 +327,8 @@ def main() -> None:
     args.out.write_text(json.dumps({"meta": meta, "summary": rows, "trials": trials}, indent=2,
                                    ensure_ascii=False) + "\n", encoding="utf-8")
     print_markdown(rows, meta)
+    print_totals(trials, selected)
+    print_wrong_verdicts(trials)
     if args.write_cases:
         write_back(args.cases, cases, rows)
 

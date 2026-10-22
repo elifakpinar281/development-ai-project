@@ -75,6 +75,15 @@ def ensure_schema() -> None:
     if config.database_url not in _schema_ready:
         init_db()
 
+FREE_MAIL_DOMAINS = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com",
+                     "yahoo.com", "icloud.com", "proton.me", "protonmail.com", "gmx.com",
+                     "gmx.de", "web.de", "aol.com"}
+IGNORED_FOR_MATCHING = set(KNOWN_BRANDS) | FREE_MAIL_DOMAINS
+MIN_SUBJECT_WORDS = 3
+
+
+def matchable_sender(domain: str) -> str:
+    return "" if domain in IGNORED_FOR_MATCHING else domain
 
 def subject_fingerprint(subject: str) -> str:
     if not isinstance(subject, str):
@@ -90,7 +99,7 @@ def subject_fingerprint(subject: str) -> str:
     normalized = re.sub(r"\d+", "#", normalized)
     normalized = re.sub(r"\s+", " ", normalized).strip()
 
-    if not normalized:
+    if len(normalized.split(" ")) < MIN_SUBJECT_WORDS:
         return ""
 
     return hashlib.sha256(
@@ -112,7 +121,7 @@ def fingerprint(parsed: ParsedEmail) -> dict:
     links = sorted(domain for domain in links if domain and domain not in KNOWN_BRANDS)
 
     return {
-        "sender_domain": _registrable(parsed.sender.domain or parsed.sender.address),
+        "sender_domain": matchable_sender(_registrable(parsed.sender.domain or parsed.sender.address)),
         "link_domains": links,
         "subject_hash": subject_fingerprint(parsed.subject or ""),
     }
