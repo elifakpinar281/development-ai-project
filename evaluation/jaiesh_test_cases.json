@@ -69,7 +69,7 @@
       ],
       "max_risk": 59
     },
-    "actual_result": "",
-    "status": "pending"
+    "actual_result": "Evaluation runs with qwen2.5:3b (run_evaluation.py): likely safe, risk 39, in the agent run of 21 October and again in Run F of 22 October. The fixed pipeline and llm_only also rated it likely safe, risk 39. The first try in the UI ended in the offline fallback after a model timeout.",
+    "status": "pass"
   }
 ]

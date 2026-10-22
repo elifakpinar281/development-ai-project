@@ -119,7 +119,7 @@ The application code controls which tools exist, validates every tool call, limi
 
 1. **User input:** The user pastes an email or uploads an `.eml` file in the Gradio interface.
 2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input before any model call. The email parser then extracts sender, reply-to, return-path, authentication results, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
-3. **Automatic scans:** Before the model sees the email, two deterministic scans run. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 and 2.
+3. **Automatic scans:** Before the model sees the email, three deterministic scans run. The lookalike check compares the sender and link domains with well-known domains. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 to 3.
 4. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the result as a numbered observation. This repeats until the model finishes or the budget of 6 steps is used up.
 5. **Verdict validation:** The model's final report must match a fixed schema. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
 6. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation, warnings and investigation trace. A fingerprint of the validated verdict is stored in the case history.
@@ -152,6 +152,7 @@ Application Service (src/services/ai_service.py)
   | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 steps
   |    → Prompt Injection Scan (src/capabilities/injection_scan.py): always observation 1
   |    → Payment Fraud Scan (src/capabilities/fraud_scan.py): always observation 2
+  |    → Lookalike Domain Scan (offline part of check_lookalike_domain): always observation 3
   |    → Tool Registry (src/capabilities/tool_registry.py): validates every tool call
   |       - email checks, in-process (src/capabilities/tools.py):
   |           check_email_authentication, analyze_links, inspect_attachments
@@ -210,9 +211,9 @@ Which checks are useful therefore cannot be decided in advance:
 - **The relevant checks depend on the email.** Link checks are pointless for an email without links and attachment checks are pointless without attachments.
 - **Each result changes what to check next.** A suspicious finding calls for a deeper check, while a clear finding makes further checks unnecessary.
 
-A fixed workflow would run every check on every email. This is slower, sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
+A fixed workflow would run every check on every email. It sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
 
-The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
+The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)). The result is mixed. The agent used fewer than half of the tool calls (2.9 against 6.6), but it was not faster, because every step of the agent is a model call, and a model call is much slower than a tool call on a laptop without a graphics card. The agent therefore pays off most when tool calls are expensive (external services, rate limits, privacy) and when a faster model is available.
 
 #### Model Context Protocol (MCP)
 The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The application starts the server once, discovers the tools via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
@@ -329,11 +330,12 @@ On the 35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run per
 
 | Configuration | Accuracy | Recall | False-positive rate | Median time per email |
 |---|---|---|---|---|
-| Agent (SpotThePhish) | 0.857 | 1.00 | 0.50 | 75 s |
+| Agent, first version (21 Oct) | 0.857 | 1.00 | 0.50 | 75 s |
+| Agent, verdict in a fresh context (22 Oct) | 0.886 | 0.84 | 0.00 | 72 s |
 | Fixed pipeline | 0.943 | 0.92 | 0.00 | 59 s |
 | LLM-only | 0.857 | 0.84 | 0.10 | 26 s |
 
-The checks matter for what the text alone cannot show: LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which the other two configurations found. In this run the agent did not beat the fixed pipeline. It never missed a phishing email, but it rated five genuine emails as phishing. The sample is small and every email ran once, so these differences are not reliable. The details and limitations are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
+The checks matter for what the text alone cannot show: LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which the tool-based configurations found. The first version of the agent never missed a phishing email but rated five of ten genuine emails as phishing. The model had requested the verdict in the same conversation as its own guesses during the investigation. After we moved the verdict into a fresh context with only the email and the check results (Decision 10), the agent raised no false alarm any more, but it missed four phishing emails, which it rated likely safe at the top of that band (risk 39). In both versions the agent did not beat the fixed pipeline. The sample is small and every email ran once, so these differences are not reliable. The details and limitations are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
 
 ### Dataset
 The evaluation uses two data sources, because each one covers a different part of the application:
@@ -341,10 +343,10 @@ The evaluation uses two data sources, because each one covers a different part o
 | Source | Content | Used to evaluate |
 |---|---|---|
 | [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for suspicious senders and links (only one spoofing case uses a free-mail address) | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
-The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
+The evaluation runner can draw a stratified sample of the dataset with a fixed seed (`--zenodo`), so every run sees the same emails. Because every email takes about a minute on a laptop without a graphics card, the reported comparison uses only the hand-crafted emails. The Zenodo sample is listed as an open action item.
 Reputation and domain-age results change over time, so the results of the online checks are stored in an evaluation cache and replayed. For the fictional domains they are seeded on purpose (see Decision 8).
 
 Dataset sources and licenses are documented in [`data/README.md`](data/README.md).

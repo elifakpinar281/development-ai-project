@@ -18,11 +18,9 @@ from typing import Optional
 import gradio as gr
 
 from src.config import config
-from src.email_parser import parse_email
 from src.schemas.agent import ChatMessage
-from src.schemas.responses import ParsedEmail
 from src.services.ai_service import analyze_email
-from src.services.follow_up import answer_question
+from src.services.follow_up import ask_follow_up
 from src.services.history import (
     Campaign,
     HistoryEntry,
@@ -31,11 +29,12 @@ from src.services.history import (
     grouping_rows,
     grouping_text,
     matched_by,
+    record_analysis,
     session_history,
     tactics,
     what_to_do,
 )
-from src.services.model_choice import available_models, get_model_client, get_service_for_model
+from src.services.model_choice import available_models, get_service_for_model
 
 FRONTEND = Path(__file__).parent / "frontend"
 
@@ -258,7 +257,6 @@ def _entry_view(entry: HistoryEntry) -> dict:
         "id": entry.entry_id,
         "verdict": verdict.verdict,
         "risk": round(verdict.risk_score),
-        "confidence": round(verdict.confidence * 100),
         "explanation": verdict.explanation,
         "action": verdict.recommended_action,
         "analysed_at": _analysed_label(entry.analysed_at),
@@ -305,11 +303,7 @@ def analyze(request: dict) -> dict:
     result = analyze_email(text, get_service_for_model(model))
     if result.verdict is None:
         return {"rejected": True, "message": result.message}
-    try:
-        email = parse_email(text)
-    except Exception:
-        email = ParsedEmail(raw_text=text, body_plain=text, has_headers=False)
-    entry = session_history().add(email, result, model)
+    entry = record_analysis(text, result, model)
     return _entry_view(entry)
 
 
@@ -328,7 +322,7 @@ def ask(request: dict) -> dict:
     question = str(request.get("question") or "").strip()
     if not question:
         return _entry_view(entry)
-    answer = answer_question(get_model_client(entry.model_name), entry, question)
+    answer = ask_follow_up(entry, question)
     history.add_message(entry.entry_id, ChatMessage(role="user", content=question))
     history.add_message(entry.entry_id, ChatMessage(role="assistant", content=answer))
     return _entry_view(entry)

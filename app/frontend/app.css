@@ -412,8 +412,6 @@ footer, .gradio-container footer, .toast-wrap, .loading-wrap { display: none !im
 .risk .bar i { display: block; height: 100%; background: #a51e1e; }
 .v-suspicious .risk .bar i { background: #d97706; }
 .v-safe .risk .bar i { background: #16a34a; }
-.confidence { text-align: right; font-size: 15px; color: var(--ink); margin-top: 6px; }
-.res-card .confidence + h3 { margin-top: 2px; }
 .stats { display: flex; flex-wrap: wrap; gap: 6px 46px; font-size: 15px; color: #333; margin: 26px 0 23px; }
 .camp-banner {
   display: flex; align-items: center; justify-content: space-between; gap: 16px;

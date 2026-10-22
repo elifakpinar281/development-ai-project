@@ -4,12 +4,12 @@ This file collects the evaluation of the whole team. The overview below summaris
 
 ## Summary Overview
 
-- **Dates of evaluation:** 20 and 21 October 2026
+- **Dates of evaluation:** 20 to 22 October 2026
 - **Model evaluated:** `qwen2.5:3b` through Ollama (default), with a comparison run of `qwen3:8b` on ten emails
 - **Hardware:** laptops without a graphics card, so the model runs on the processor
 - **Test cases:** 43 behaviour test cases with 38 hand-crafted emails, listed together in [`test_cases.json`](test_cases.json) and per person in the files below
-- **Passed:** 28, **partial:** 5, **failed:** 7, **not graded yet:** 3
-- **Pass rate of the graded cases:** 70%
+- **Passed:** 28, **partial:** 10, **failed:** 5, **not graded yet:** 0
+- **Pass rate of the graded cases:** 65%
 
 | Part | Owner | Test cases | How they were run |
 |---|---|---|---|
@@ -22,18 +22,19 @@ This file collects the evaluation of the whole team. The overview below summaris
 
 | Category | Total | Passed | Partial | Failed | Not graded yet | Pass rate (graded) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Successful cases | 13 | 7 | 3 | 2 | 1 | 58% |
-| Difficult cases | 18 | 12 | 0 | 5 | 1 | 71% |
-| Failure and adversarial cases | 12 | 9 | 2 | 0 | 1 | 82% |
-| **All cases** | 43 | 28 | 5 | 7 | 3 | 70% |
+| Successful cases | 13 | 9 | 4 | 0 | 0 | 69% |
+| Difficult cases | 18 | 9 | 5 | 4 | 0 | 50% |
+| Failure and adversarial cases | 12 | 10 | 1 | 1 | 0 | 83% |
+| **All cases** | 43 | 28 | 10 | 5 | 0 | 65% |
 
 ## Detection quality of the three configurations
 
-35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run each, `qwen2.5:3b`, suspicious counted as phishing. Details are in the section of Jaiesh below.
+35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run each, `qwen2.5:3b`, suspicious counted as phishing. The agent was run twice: before and after its verdict was moved into a fresh context (Decision 10). Details are in the sections of Jaiesh and Elif below.
 
 | Configuration | Accuracy | Precision | Recall | F1 | False-positive rate | Median time |
 |---|---|---|---|---|---|---|
-| Agent (the application) | 0.857 | 0.833 | 1.00 | 0.909 | 0.50 | 75 s |
+| Agent, first version (21 Oct) | 0.857 | 0.833 | 1.00 | 0.909 | 0.50 | 75 s |
+| Agent, verdict in a fresh context (22 Oct) | 0.886 | 1.00 | 0.84 | 0.913 | 0.00 | 72 s |
 | Fixed pipeline | 0.943 | 1.00 | 0.92 | 0.958 | 0.00 | 59 s |
 | LLM-only | 0.857 | 0.955 | 0.84 | 0.894 | 0.10 | 26 s |
 
@@ -47,14 +48,15 @@ This file collects the evaluation of the whole team. The overview below summaris
 - **Deterministic checks give stable results.** The prompt injection scan, the payment fraud scan, the lookalike check and the safety rules give the same answer in every run.
 
 ### Observed failure modes
-- **The agent raised too many false alarms.** It rated 5 of 10 genuine emails as phishing, while the fixed pipeline rated all of them correctly. All five are genuine emails with alarming wording or well-known domains, such as a password reset or a security alert.
+- **The agent first raised too many false alarms, and after the fix it missed phishing.** The first version rated 5 of 10 genuine emails as phishing. After the verdict was moved into a fresh context it raised no false alarm, but it rated 4 of 25 phishing emails likely safe, all with a risk of 39. The fixed pipeline remained the best configuration in this small sample.
 - **The judgement of the 3B model is not stable.** The same email can get a different verdict in two runs, so differences of one or two emails between configurations are not reliable.
 - **A larger model fixes most of the judgement errors.** With the same code, `qwen3:8b` passed 9 of 10 of Elif's emails without a false alarm, but it took about three minutes per email instead of one to two.
 - **The memory can spread one error.** A phishing email from a hacked hamk.fi account made later genuine hamk.fi emails look like a known campaign.
 - **Some runs ended in the offline fallback** because of model timeouts on the processor, which limits the conclusions about the model.
 
 ## Action Items & Improvements
-- [ ] Find out why the agent raises more false alarms than the fixed pipeline, for example by reading the traces of the five false positives.
+- [x] Find out why the agent raises more false alarms than the fixed pipeline. Cause: the verdict was requested in the same conversation as the model's own guesses. Fixed by a fresh context.
+- [ ] Rerun the agent after the lookalike check became an automatic observation (after Run F), which may help with the missed lookalike email (02).
 - [ ] Repeat the comparison with three runs per email, `--cache replay` and the Zenodo sample.
 - [ ] Repeat the comparison with `qwen3:8b` on hardware with a graphics card.
 - [ ] Do not match the case history on the sender domain of well-known domains.
@@ -217,6 +219,24 @@ The waiting time depends a lot on the state of the laptop. Case 27 took 54 s in 
 - **The genuine password reset was flagged in three runs in a row (23).** It stayed phishing in Run D, although the fraud rule that seemed to cause it had been removed from the prompt. The model calls the reset link suspicious while every check is clean. The small model seems to associate the words "password reset" strongly with phishing.
 - **The memory can turn a hacked account into a false alarm (22).** The gift card scam (25) comes from a real hamk.fi address, as it would from a hacked account. Its phishing verdicts were stored with the sender domain hamk.fi. In Runs C and D the case history reported up to ten earlier phishing cases for hamk.fi, and the genuine course announcement from hamk.fi was rated phishing. In real use, one hacked university account could make every later university email look suspicious. The case history should not match on the sender domain of well-known domains, as it already does for link domains. This belongs to the memory part of the application (Martina).
 - **Explanations contain false claims.** Examples are "office.com, a known phishing domain" (21), "the email lacks proper authentication" although the check reported the opposite (23, 26) and "the URL was not listed, indicating it may be malicious" (28). The validator checks that every evidence item points to a real observation or quote, but not whether the sentence about it is true.
+#### Run F: the verdict in a fresh context (22 October)
+
+The team comparison showed a false-positive rate of 0.50 for the agent against 0.00 for the fixed pipeline. The difference between the two is the conversation in which the verdict is requested. The agent asked for it in the same conversation as the investigation, where the model had written reasons such as "the email contains a suspicious link" for every step. We moved the verdict into a fresh conversation that only contains the email and the check results, like the fixed pipeline (Decision 10). Run F repeated the agent on all 35 labelled emails with `python -m evaluation.run_evaluation --configs agent` and otherwise unchanged settings.
+
+| Measure (35 emails) | Agent before (21 Oct) | Agent after, Run F (22 Oct) | Fixed pipeline |
+|---|---|---|---|
+| False positives | 5 of 10 | 0 of 10 | 0 of 10 |
+| False negatives | 0 of 25 | 4 of 25 | 2 of 25 |
+| Accuracy | 0.857 | 0.886 | 0.943 |
+| F1 | 0.909 | 0.913 | 0.958 |
+| Median time per email | 75 s | 72 s | 59 s |
+
+On my ten emails, Run F fixed both false alarms (22 and 23). Case 27, the phishing link after a long text, was missed again, and cases 24 and 26 ended in the offline fallback after a model timeout. That gives 9 pass, 2 partial and 1 fail for my twelve cases.
+
+The four missed phishing emails (02, 08, 14 and 27) were all rated likely safe with a risk of exactly 39. The application moves the score into the band of the verdict, so a score of 39 means that the model gave a higher risk score than its verdict suggested. The model was unsure and chose the milder verdict. Several genuine emails also ended at 39, so the score alone would not separate the two groups. The fresh context removed the bias towards phishing but did not make the small model more certain.
+
+Run F was made before the offline lookalike check became an automatic observation. A rerun may help with the HAMK lookalike (02).
+
 #### Model comparison: qwen2.5:3b and qwen3:8b
  
 To find out whether the remaining errors come from the size of the model, we ran all ten emails once more with `qwen3:8b` and the same code as in Run D (Run E). Everything else stayed the same: temperature 0, step budget 6, thinking off.
@@ -330,7 +350,7 @@ Four runs ended in the offline fallback (case 26 in all three configurations and
 | jaiesh-02 | Genuine Finnish HAMK reminder | Pass in the interface, but phishing in the evaluation run (see above) |
 | jaiesh-03 | Empty input | Pass: refused with a clear message |
 | jaiesh-04 | The text `hello` | Partial: not an email, but analysed and rated phishing instead of being refused |
-| jaiesh-05 | Genuine HAMK password expiry notice | Partial: fallback after a model timeout in the first try, likely safe in the evaluation run |
+| jaiesh-05 | Genuine HAMK password expiry notice | Pass: likely safe, risk 39, in both agent evaluation runs (21 and 22 October). The first try in the interface ended in the fallback after a model timeout. |
 
 #### Limitations
 

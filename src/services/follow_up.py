@@ -31,6 +31,12 @@ HOW TO ANSWER:
 """
 
 
+def ask_follow_up(entry: HistoryEntry, question: str) -> str:
+    from src.services.model_choice import get_model_client
+
+    return answer_question(get_model_client(entry.model_name), entry, question)
+
+
 def answer_question(client, entry: HistoryEntry, question: str) -> str:
     question = (question or "").strip()[:MAX_QUESTION_CHARS]
     if not question:

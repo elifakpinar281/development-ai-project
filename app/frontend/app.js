@@ -217,7 +217,6 @@
       '<div class="res-row">' + avatar() + '<article class="res-card ' + v.cls + '">' +
       '<div class="verdict-line"><h2 class="verdict">' + esc(v.label) + '</h2>' +
       '<div class="risk"><span>Risk ' + e.risk + '/100</span><div class="bar"><i style="width:' + e.risk + '%"></i></div></div></div>' +
-      '<div class="confidence">Confidence ' + e.confidence + ' %</div>' +
       '<h3>Decision</h3>' + paragraphs(e.explanation) +
       '<h3>What to do now</h3>' + paragraphs(e.action) +
       '<div class="stats"><span>' + e.checks + ' checks</span><span>' + esc(e.seconds) + '</span>' +
