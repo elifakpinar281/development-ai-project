@@ -22,7 +22,7 @@
     formMessage: '',
     filter: 'all',
     search: '',
-    noteClosed: false,
+    noteOpen: readNoteSetting(),
     asking: {},
     collapsed: { emails: false, campaigns: false },
   };
@@ -57,6 +57,12 @@
   const ICON_SEARCH = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="7" cy="7" r="5.2" stroke="currentColor" stroke-width="1.5"/><path d="m11 11 3.5 3.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
   const ICON_PIN = '<svg width="22" height="26" viewBox="0 0 22 26" fill="none"><ellipse cx="11" cy="7" rx="7" ry="6" fill="#3b3b3b"/><ellipse cx="9" cy="5" rx="2.4" ry="1.6" fill="#8a8a8a"/><path d="M8 12h6l-1 4h-4l-1-4Z" fill="#2b2b2b"/><path d="M11 16v9" stroke="#555" stroke-width="1.6" stroke-linecap="round"/></svg>';
 
+  function readNoteSetting() {
+    try { return localStorage.getItem('stp-note') !== 'closed'; } catch (error) { return true; }
+  }
+  function saveNoteSetting(open) {
+    try { localStorage.setItem('stp-note', open ? 'open' : 'closed'); } catch (error) { /* ignore */ }
+  }
   function esc(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -116,14 +122,30 @@
   }
 
   function noteHtml() {
-    return '<span class="note-pin">' + ICON_PIN + '</span>' +
-      '<button class="note-close" type="button" data-note-close aria-label="Close">&times;</button>' +
+    return '<button class="note-close" type="button" data-note-close aria-label="Hide help">&times;</button>' +
+      '<div class="note-text">' +
       '<div class="note-title">How it works</div>' +
-      '<ol class="note-steps">' +
-      '<li><span class="note-num">1</span><div><b>Paste or upload</b><span>Paste the email source or upload an .eml file</span></div></li>' +
-      '<li><span class="note-num">2</span><div><b>Agent investigates</b><span>Up to 6 checks: links, sender, domains, attachments</span></div></li>' +
-      '<li><span class="note-num">3</span><div><b>Get a verdict</b><span>Risk score, evidence and a clear recommended action.</span></div></li>' +
-      '</ol>';
+      '<div class="note-step s1"><b>Paste or upload</b><span>Paste the email source or upload an .eml file</span></div>' +
+      '<div class="note-step s2"><b>Agent investigates</b><span>Up to 6 checks: links, sender, domains, attachments</span></div>' +
+      '<div class="note-step s3"><b>Get a verdict</b><span>Risk score, evidence and a clear recommended action.</span></div>' +
+      '</div>';
+  }
+
+  function updateNote() {
+    const page = route().page;
+    const chatPage = page === 'analyze' || page === 'pending' || page === 'email';
+    root.querySelector('.stp').classList.toggle('chat-page', chatPage);
+    const slot = main.querySelector('[data-note-slot]');
+    const home = slot || root.querySelector('.stp');
+    if (helpNote.parentElement !== home) home.appendChild(helpNote);
+    helpNote.classList.toggle('open', chatPage && state.noteOpen);
+    root.querySelector('[data-help]').setAttribute('aria-pressed', state.noteOpen ? 'true' : 'false');
+  }
+
+  function setNote(open) {
+    state.noteOpen = open;
+    saveNoteSetting(open);
+    updateNote();
   }
 
   function renderAnalyze() {
@@ -148,10 +170,11 @@
       '<button type="submit" class="send-btn" aria-label="Analyze email">' + ICON_SEND + '</button>' +
       '</div></form>' +
       (state.formMessage ? '<p class="form-message">' + esc(state.formMessage) + '</p>' : '') +
-      (state.noteClosed ? '' : '<div class="note-wrap"><div class="note">' + noteHtml() + '</div></div>') +
+      '<div class="note-slot" data-note-slot></div>' +
       '</div>';
     const area = main.querySelector('[data-email]');
     autosize(area);
+    updateNote();
   }
 
   function autosize(area) {
@@ -170,8 +193,7 @@
   }
 
   function topRowHtml() {
-    return '<div class="res-top"><a class="crumb" href="#/analyze">New analysis</a>' +
-      '<button type="button" class="help-btn" data-help><span class="help-q">?</span>Help</button></div>';
+    return '<div class="res-top"><a class="crumb" href="#/analyze">New analysis</a></div>';
   }
 
   function avatar() {
@@ -311,7 +333,7 @@
     const campaigns = state.overview.campaigns || [];
     main.innerHTML = '<div class="pg-campaigns">' +
       '<h1 class="page-title">Campaigns</h1>' +
-      '<p class="page-desc">When several phishing emails share a sender domain, a link domain or a subject pattern, they\'re grouped into a campaign — one attack sent many times.</p>' +
+      '<p class="page-desc">When several phishing emails share a sender domain, a link domain or a subject pattern, they\'re grouped into a campaign (one attack sent many times).</p>' +
       (campaigns.length ? '<div class="camp-grid">' + campaigns.map(function (c) {
         return '<article class="camp-card">' +
           '<div class="cc-seen">last seen ' + esc(c.last_seen_short) + '</div>' +
@@ -359,17 +381,17 @@
       '<h1 class="page-title">About</h1>' +
       '<p class="page-sub">SpotThePhish checks a single email for phishing and explains its verdict with evidence.</p>' +
       '<div class="about-text">' +
-      '<p>Paste an email or upload an .eml file. An investigation agent decides which security checks to run — sender authentication, links, lookalike and new domains, attachments and earlier cases — and stops when it has enough evidence. You get a verdict, a risk score, the evidence and a recommended action.</p>' +
+      '<p>Paste an email or upload an .eml file. An investigation agent decides which security checks to run: sender authentication, links, lookalike and new domains, attachments and earlier cases and stops when it has enough evidence. You get a verdict, a risk score, the evidence and a recommended action.</p>' +
       '<p>The model runs locally with Ollama, so the email stays on your machine. Every evidence item must cite a check that actually ran or quote the email word for word, and safety rules the model cannot override decide the minimum risk.</p>' +
       '<p>Only fingerprints of verdicts (sender domain, link domains, a hash of the subject) are stored in the case history. Previous chats and campaigns on this page are kept only while the app is running.</p>' +
       '<p>SpotThePhish is a decision aid, not a guarantee. When in doubt, do not click links and report the email to IT support.</p>' +
-      '<p class="about-team">Development of AI Applications, HAMK, Autumn 2026 — Elif Akpinar, Jaiesh Badireddy, Riana Debre, Martina Spiegel</p>' +
+      '<p class="about-team">Development of AI Applications, HAMK, Autumn 2026 - Elif Akpinar, Jaiesh Badireddy, Riana Debre, Martina Spiegel</p>' +
       '</div></div></div>';
   }
 
   function render() {
     const r = route();
-    helpNote.hidden = true;
+    updateNote();
     root.querySelectorAll('[data-nav]').forEach(function (a) {
       a.classList.toggle('current', a.getAttribute('data-nav') === (r.page === 'campaign' ? 'campaigns' : r.page === 'email' ? '' : r.page));
     });
@@ -381,6 +403,7 @@
     else if (r.page === 'email') renderEntryRoute(r.id);
     else renderAnalyze();
     renderSidebar();
+    updateNote();
     main.scrollTop = 0;
   }
 
@@ -466,11 +489,9 @@
       fileInput.value = '';
       fileInput.click();
     } else if (t.hasAttribute('data-note-close')) {
-      if (t.closest('[data-help-note]')) helpNote.hidden = true;
-      else { state.noteClosed = true; const wrap = main.querySelector('.note-wrap'); if (wrap) wrap.remove(); }
+      setNote(false);
     } else if (t.hasAttribute('data-help')) {
-      helpNote.innerHTML = noteHtml();
-      helpNote.hidden = !helpNote.hidden;
+      setNote(!state.noteOpen);
     } else if (t.hasAttribute('data-collapse')) {
       const name = t.getAttribute('data-collapse');
       state.collapsed[name] = !state.collapsed[name];
@@ -536,6 +557,7 @@
     readFile(event.dataTransfer.files && event.dataTransfer.files[0]);
   });
 
+  helpNote.innerHTML = noteHtml();
   window.addEventListener('hashchange', render);
 
   render();

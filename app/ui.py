@@ -1,3 +1,10 @@
+"""SpotThePhish web interface (Gradio).
+
+The page itself is plain HTML, CSS and JavaScript (app/frontend/). Gradio serves it
+as one gr.HTML component and exposes the Python functions below to the page as
+server functions. The UI talks only to the service layer. It never calls the
+model client or any tool directly.
+"""
 from __future__ import annotations
 
 import base64
@@ -48,7 +55,6 @@ EVIDENCE_TOOL = re.compile(r"^\[#(\d+) ([a-z_]+)\] (.*)$", re.S)
 EVIDENCE_QUOTE = re.compile(r'^\[email text\] "(.*)": (.*)$', re.S)
 
 
-
 def _ordinal(day: int) -> str:
     if 11 <= day % 100 <= 13:
         return f"{day}th"
@@ -81,7 +87,6 @@ def _email_date(value: Optional[str]) -> str:
 def _number_word(count: int) -> str:
     words = {1: "One", 2: "Two", 3: "Three", 4: "Four", 5: "Five", 6: "Six"}
     return words.get(count, str(count))
-
 
 
 def _subject(entry: HistoryEntry) -> str:
@@ -333,9 +338,13 @@ def _read(name: str) -> str:
     return (FRONTEND / name).read_text(encoding="utf-8")
 
 
-def _logo_data_uri() -> str:
-    data = base64.b64encode((FRONTEND / "logo.png").read_bytes()).decode("ascii")
+def _data_uri(filename: str) -> str:
+    data = base64.b64encode((FRONTEND / filename).read_bytes()).decode("ascii")
     return "data:image/png;base64," + data
+
+
+def _logo_data_uri() -> str:
+    return _data_uri("logo.png")
 
 
 FONT_FILES = [
@@ -358,8 +367,18 @@ def _font_css() -> str:
     return "\n".join(rules)
 
 
-SCOPE_MARKER = "/* @scope-start"
 SCOPE = "#stp-app"
+GLOBAL_SELECTORS = ("html", "body", ":root", "gradio-app", ".gradio-container", "footer", ".toast-wrap",
+                    ".loading-wrap", "#stp-app")
+
+
+def _scope_selector(selector: str) -> str:
+    for start in GLOBAL_SELECTORS:
+        if selector == start or selector.startswith(start + " ") or selector.startswith(start + ",") \
+                or selector.startswith(start + ".") or selector.startswith(start + ":") \
+                or selector.startswith(start + ">") or selector.startswith(start + "["):
+            return selector
+    return SCOPE + " " + selector
 
 
 def _scope_selectors(css: str) -> str:
@@ -369,17 +388,15 @@ def _scope_selectors(css: str) -> str:
     for char in css:
         if char == "{":
             header = buffer.strip()
-            if header.startswith("@"):
+            if header.startswith("@") or depth > 1:
                 output.append(buffer + "{")
-            elif depth <= 1:
+            else:  
                 selectors = []
                 for selector in header.split(","):
                     selector = selector.strip()
                     if selector:
-                        selectors.append(SCOPE + " " + selector)
+                        selectors.append(_scope_selector(selector))
                 output.append(_leading_space(buffer) + ", ".join(selectors) + " {")
-            else:
-                output.append(buffer + "{")
             buffer = ""
             depth += 1
         elif char == "}":
@@ -398,11 +415,9 @@ def _leading_space(text: str) -> str:
 
 
 def _page_css() -> str:
-    css = _read("app.css")
-    marker = css.find(SCOPE_MARKER)
-    if marker >= 0:
-        css = css[:marker] + _scope_selectors(_strip_comments(css[marker:]))
-    return _font_css() + "\n" + css
+    css = _strip_comments(_read("app.css"))
+    css = css.replace('url("note.png")', 'url("' + _data_uri("note.png") + '")')
+    return _font_css() + "\n" + _scope_selectors(css)
 
 
 def _strip_comments(css: str) -> str:
