@@ -21,6 +21,19 @@ DOMAIN_AGES = {
     "hamk.fi": 9000,
     "parcel-hub-notice.example": 1,
     "xn--pypal-4ve.example": 2,
+    "hamk-test.example": 3000,
+    "company-test.example": 3000,
+    "mail-hamk-support.example": 3,
+    "paypa1-alerts.example": 2,
+    "office-license-renewal.example": 4,
+    "hamk-account-verify.example": 5,
+    "hamk-opiskelija-tuki.example": 3,
+    "hamk-staff-news.example": 6,
+    "hamk-mail-migration.example": 2,
+    "hamk-payroll-update.example": 1,
+    "posti-trackings.example": 4,
+    "nordea-notify.example": 2,
+    "xn--norda-qqa.fi": 3,
 }
 MALICIOUS_URLS = {"http://paypa1.example/verify"}
 CLEAN_URLS = {
@@ -34,6 +47,16 @@ CLEAN_URLS = {
     "http://parcel-hub-notice.example/pay?ref=77310",
     "http://xn--pypal-4ve.example/signin",
     "https://www.hamk.fi/studies/",
+    "http://mail-hamk-support.example/login",
+    "http://paypa1-alerts.example/confirm",
+    "http://office-license-renewal.example/renew",
+    "http://hamk-account-verify.example/login",
+    "http://hamk-opiskelija-tuki.example/vahvista",
+    "http://hamk-mail-migration.example/confirm",
+    "http://hamk-payroll-update.example/bank-details",
+    "http://xn--norda-qqa.fi/secure",
+    "https://192.168.1.50/nordea/login"
+
 }
 
 

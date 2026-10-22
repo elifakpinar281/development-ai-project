@@ -1,5 +1,5 @@
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from dotenv import load_dotenv
 
 # Load environment variables from .env file if present
@@ -28,11 +28,11 @@ class Config:
 
     prompt_max_body_chars: int = int(os.getenv("PROMPT_MAX_BODY_CHARS", "6000"))
 
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://spotthephish:spotthephish@localhost:5432/spotthephish",)
+    database_url: str = field(default=os.getenv("DATABASE_URL", "postgresql://spotthephish:spotthephish@localhost:5432/spotthephish",), repr=False)
 
     test_database_url: str = os.getenv("TEST_DATABASE_URL", "postgresql://spotthephish:spotthephish@localhost:5432/spotthephish_test",)
 
-    safe_browsing_api_key: str = os.getenv("SAFE_BROWSING_API_KEY", "")
+    safe_browsing_api_key: str = field(default=os.getenv("SAFE_BROWSING_API_KEY", ""), repr=False)
 
     http_timeout: float = float(os.getenv("HTTP_TIMEOUT", "5"))
 

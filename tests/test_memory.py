@@ -2,6 +2,7 @@ import os
 
 import pytest
 
+from src.email_parser import parse_email
 from src.capabilities import domain_tools as t
 from src.capabilities import eval_cache, memory
 from src.config import config
@@ -108,3 +109,19 @@ def test_campaign_match_with_subdomains(db):
         _verdict())
     r = t.lookup_case_history("parcel-notice.example", ["parcel-notice.example"], "Something else")
     assert r.status == "warning" and r.details["matches"] == 1
+
+def test_known_sender_domain_is_not_matched(monkeypatch):
+    seen = {}
+    monkeypatch.setattr(memory, "find_similar",
+                        lambda s, l, h, limit=10: seen.update(sender=s) or [])
+    t.lookup_case_history("hamk.fi", [], "Hello")
+    assert seen["sender"] == ""
+
+def test_fingerprint_drops_known_sender():
+    raw = "From: Moodle <noreply@hamk.fi>\nTo: a@x.example\nSubject: Hi\nDate: Mon, 1 Jan 2026 10:00:00 +0000\n\nHello"
+    assert memory.fingerprint(parse_email(raw))["sender_domain"] == ""
+
+def test_short_subjects_are_not_used_for_matching():
+    assert memory.subject_fingerprint("Hello") == ""
+    assert memory.subject_fingerprint("Re: Invoice") == ""
+    assert memory.subject_fingerprint("Invoice 20931 overdue") == memory.subject_fingerprint("Invoice 20931 overdue")

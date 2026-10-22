@@ -172,3 +172,91 @@ def test_http_errors_are_not_reported_as_timeouts(monkeypatch):
     monkeypatch.setattr(httpx, "get", too_many)
     r = t.check_domain_age("loop.example")
     assert r.status == "unavailable" and "timed out" not in r.finding
+
+def test_api_key_is_sent_in_header_not_in_url(monkeypatch):
+    from src.config import config
+    monkeypatch.setattr(config, "safe_browsing_api_key", "SECRET123")
+    seen = {}
+
+    def fake_post(url, **kwargs):
+        seen["url"] = url
+        seen["kwargs"] = kwargs
+        return _resp(200, {})
+
+    monkeypatch.setattr(httpx, "post", fake_post)
+    t.check_url_reputation("https://example.com/")
+
+    assert "SECRET123" not in seen["url"]
+    assert "key" not in (seen["kwargs"].get("params") or {})
+    assert seen["kwargs"]["headers"]["x-goog-api-key"] == "SECRET123"
+
+def test_reputation_sends_key_in_header_not_in_url(monkeypatch):
+    seen = {}
+    def fake_post(url, **kwargs):
+        seen["url"], seen["kwargs"] = url, kwargs
+        return _resp(200, {})
+    monkeypatch.setattr(config, "safe_browsing_api_key", "SECRET123")
+    monkeypatch.setattr(httpx, "post", fake_post)
+    t.check_url_reputation("http://fine.example/")
+    assert "SECRET123" not in seen["url"]
+    assert "params" not in seen["kwargs"]
+    assert seen["kwargs"]["headers"]["x-goog-api-key"] == "SECRET123"
+
+
+def test_http_client_loggers_are_silenced():
+    import logging
+    for name in ("httpx", "httpcore"):
+        assert logging.getLogger(name).level >= logging.WARNING
+
+
+def test_config_repr_hides_secrets(monkeypatch):
+    monkeypatch.setattr(config, "safe_browsing_api_key", "SECRET123")
+    assert "SECRET123" not in repr(config)
+
+def test_every_mcp_tool_has_a_description():
+    import asyncio
+    from src.mcp_servers import domain_server
+    tools = asyncio.run(domain_server.mcp.list_tools())
+    for tool in tools:
+        description = (tool.description or "").strip()
+        print(f"{tool.name}: {len(description)} characters — {description!r}")
+    assert len(tools) == 4
+
+@pytest.mark.parametrize("domain,brand", [
+    ("paypal.com.secure-id.net", "paypal.com"),
+    ("hamk.fi.login-check.com", "hamk.fi"),
+    ("login.paypal.evil-site.com", "paypal.com"),
+    ("paypa1.evil-site.com", "paypal.com"),
+    ("https://paypal.com.secure-id.net/login", "paypal.com"),
+])
+
+def test_lookalike_brand_in_subdomain(domain, brand):
+    r = t.check_lookalike_domain(domain)
+    assert r.status == "warning" and r.risk_score == 80
+    assert r.details["matched_brand"] == brand
+    assert r.details["match_type"] == "brand_in_subdomain"
+
+@pytest.mark.parametrize("domain", ["lecture-office.example", "apple-orchard.example", "zoom-photography.example"])
+def test_generic_brand_word_alone_is_not_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "success"
+
+@pytest.mark.parametrize("domain", ["office365-login.example", "apple-account-verify.example"])
+def test_generic_brand_word_with_account_word_is_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "warning"
+
+def test_eval_cache_miss_makes_domain_age_unavailable(monkeypatch):
+    from src.capabilities import eval_cache
+    monkeypatch.setattr(t.config, "eval_cache_mode", "reply")
+    monkeypatch.setattr(eval_cache, "_read", lambda tool_name, key: None)
+    result = t.check_domain_age("invoice-portal-ab12.example")
+    assert result.status == "unavailable"
+    assert "Traceback" not in result.finding
+
+@pytest.mark.parametrize("domain", ["office.company.example", "apple.recipes.example", "zoom.uscourses.example"])
+def test_generic_word_in_subdomain_is_not_a_lookalike(domain):
+    assert t.check_lookalike_domain(domain).status == "success"
+
+@pytest.mark.parametrize("domain, brand", [("login.paypal.com.evil.example", "paypal.com"), ("office-login.company.example", "office.com")])
+def test_brand_in_subdomain(domain, brand):
+    r = t.check_lookalike_domain(domain)
+    assert r.status == "warning" and r.details["matched_brand"] == brand
