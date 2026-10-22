@@ -225,7 +225,7 @@ def test_step_limit_forces_a_final_answer():
 
     assert len(source.calls) == 3
     assert kinds(output)[-2:] == ["step_limit", "final_answer"]
-    assert "used all your tool calls" in model.calls[-1][-1].content
+    assert "used all its tool calls" in model.calls[-1][-1].content
 
 
 def test_refused_calls_also_use_up_steps_so_the_loop_always_ends():
@@ -360,3 +360,18 @@ def test_null_arguments_and_decimal_scores_are_accepted():
     output = agent.analyze(make_email())
     assert source.calls == [("analyze_links", {})]
     assert output.verdict.risk_score == 56
+
+
+def test_verdict_is_requested_without_the_models_own_reasons():
+    replies = [
+        decide("analyze_links", reason="This link looks very suspicious to me."),
+        decide(None),
+        final(),
+    ]
+    agent, model, _ = make_agent(replies)
+    agent.analyze(make_email())
+
+    verdict_request = model.calls[-1]
+    assert [message.role for message in verdict_request] == ["system", "user"]
+    assert "looks very suspicious to me" not in verdict_request[-1].content
+    assert "Results of the checks the application ran" in verdict_request[-1].content

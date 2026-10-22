@@ -1,33 +1,66 @@
 # Evaluation Results Summary
 
+This file collects the evaluation of the whole team. The overview below summarises all behaviour test cases and the comparison of the three configurations. Each team member then reports their own part in detail.
+
 ## Summary Overview
 
-- **Date of Evaluation:** YYYY-MM-DD
-- **Model Evaluated:** (e.g., `llama3.2`)
-- **Total Test Cases Executed:** 0
-- **Passed:** 0
-- **Failed:** 0
-- **Pass Rate:** 0%
+- **Dates of evaluation:** 20 and 21 October 2026
+- **Model evaluated:** `qwen2.5:3b` through Ollama (default), with a comparison run of `qwen3:8b` on ten emails
+- **Hardware:** laptops without a graphics card, so the model runs on the processor
+- **Test cases:** 43 behaviour test cases with 38 hand-crafted emails, listed together in [`test_cases.json`](test_cases.json) and per person in the files below
+- **Passed:** 28, **partial:** 5, **failed:** 7, **not graded yet:** 3
+- **Pass rate of the graded cases:** 70%
+
+| Part | Owner | Test cases | How they were run |
+|---|---|---|---|
+| Domain checks and case history | Martina | [`martina_test_cases.json`](martina_test_cases.json) | `run_martina_eval.py`, 3 runs per case, cache replay |
+| Agent, model and service | Elif | [`elif_test_cases.json`](elif_test_cases.json) | `scripts/try_agent.py`, four improvement rounds and a model comparison |
+| Email parsing and local checks | Riana | [`riana_test_cases.json`](riana_test_cases.json) | agent and offline fallback compared |
+| Baselines and detection quality, UI | Jaiesh | [`jaiesh_test_cases.json`](jaiesh_test_cases.json) | `run_evaluation.py`, three configurations on 35 labelled emails |
 
 ## Performance by Category
 
-| Category | Total Cases | Passed | Failed | Pass Rate |
-| :--- | :---: | :---: | :---: | :---: |
-| Successful Cases | 0 | 0 | 0 | 0% |
-| Difficult Cases | 0 | 0 | 0 | 0% |
-| Failure / Edge Cases | 0 | 0 | 0 | 0% |
+| Category | Total | Passed | Partial | Failed | Not graded yet | Pass rate (graded) |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: |
+| Successful cases | 13 | 7 | 3 | 2 | 1 | 58% |
+| Difficult cases | 18 | 12 | 0 | 5 | 1 | 71% |
+| Failure and adversarial cases | 12 | 9 | 2 | 0 | 1 | 82% |
+| **All cases** | 43 | 28 | 5 | 7 | 3 | 70% |
+
+## Detection quality of the three configurations
+
+35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run each, `qwen2.5:3b`, suspicious counted as phishing. Details are in the section of Jaiesh below.
+
+| Configuration | Accuracy | Precision | Recall | F1 | False-positive rate | Median time |
+|---|---|---|---|---|---|---|
+| Agent (the application) | 0.857 | 0.833 | 1.00 | 0.909 | 0.50 | 75 s |
+| Fixed pipeline | 0.943 | 1.00 | 0.92 | 0.958 | 0.00 | 59 s |
+| LLM-only | 0.857 | 0.955 | 0.84 | 0.894 | 0.10 | 26 s |
 
 ## Key Findings & Failure Analysis
 
 ### What worked well
-- Observation 1
-- Observation 2
+- **The safeguards of the application held in every run.** No prompt injection led to a likely safe verdict, invented evidence was always rejected by the validator, and tool calls with domains outside the email were refused.
+- **Tools add what the text alone cannot show.** LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which both tool-based configurations found.
+- **No phishing email was missed by the agent** in the comparison run (recall 1.00), which is our primary metric.
+- **Failures are handled in a controlled way.** Ollama not running, a missing model, unavailable online services and empty input all led to a labelled result or a clear message instead of a crash.
+- **Deterministic checks give stable results.** The prompt injection scan, the payment fraud scan, the lookalike check and the safety rules give the same answer in every run.
 
 ### Observed failure modes
-- Description of case where the system failed and why.
+- **The agent raised too many false alarms.** It rated 5 of 10 genuine emails as phishing, while the fixed pipeline rated all of them correctly. All five are genuine emails with alarming wording or well-known domains, such as a password reset or a security alert.
+- **The judgement of the 3B model is not stable.** The same email can get a different verdict in two runs, so differences of one or two emails between configurations are not reliable.
+- **A larger model fixes most of the judgement errors.** With the same code, `qwen3:8b` passed 9 of 10 of Elif's emails without a false alarm, but it took about three minutes per email instead of one to two.
+- **The memory can spread one error.** A phishing email from a hacked hamk.fi account made later genuine hamk.fi emails look like a known campaign.
+- **Some runs ended in the offline fallback** because of model timeouts on the processor, which limits the conclusions about the model.
 
 ## Action Items & Improvements
-- [ ] Planned fix or enhancement based on evaluation findings.
+- [ ] Find out why the agent raises more false alarms than the fixed pipeline, for example by reading the traces of the five false positives.
+- [ ] Repeat the comparison with three runs per email, `--cache replay` and the Zenodo sample.
+- [ ] Repeat the comparison with `qwen3:8b` on hardware with a graphics card.
+- [ ] Do not match the case history on the sender domain of well-known domains.
+- [ ] Refuse input that is clearly not an email.
+
+## Detailed results per team member
 
 ### Domain checks and case history (Martina)
 
@@ -335,4 +368,3 @@ Four runs ended in the offline fallback (case 26 in all three configurations and
 3. **Offline Fallback vs. Agent comparison:**
    * **Speed & Determinism:** The offline fallback executes in milliseconds with zero network or GPU overhead, making it an ideal fast pre-filter or graceful failover when Ollama is unavailable.
    * **Contextual Reasoning:** The agent provides human-readable explanations and actionable user advice ("Do not click on the provided links. Report the email as phishing..."), which raw deterministic security tools cannot generate on their own.
-

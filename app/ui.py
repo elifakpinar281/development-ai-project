@@ -17,8 +17,8 @@ STYLE = {
 }
 
 EXAMPLES = [
-    ['From: "PayPal Support" <support@paypa1-secure.com>\nSubject: Urgent: Your account is suspended\n\n'
-     "Dear customer, your account has been limited. Verify now:\nhttp://paypa1-secure.com/login"],
+    ['From: "PayPal Support" <support@paypa1-secure.example>\nSubject: Urgent: Your account is suspended\n\n'
+     "Dear customer, your account has been limited. Verify now:\nhttp://paypa1-secure.example/login"],
     ["From: GitHub <noreply@github.com>\nSubject: [GitHub] New sign-in to your account\n\n"
      "We noticed a new sign-in. If this was you, no action is needed.\nhttps://github.com/settings/security-log"],
     ["From: Prize Desk <win@free-gifts.example>\nSubject: You won!\n\n"
@@ -201,7 +201,7 @@ def run_analysis(pasted_text, uploaded_file):
     score = max(0, min(100, int(round(v.risk_score))))
 
     body = (f'<div class="bar"><div style="width:{score}%;"></div></div>'
-            f'<div class="muted">Risk score <b>{score}/100</b> &middot; confidence {v.confidence:.0%}</div>'
+            f'<div class="muted">Risk score <b>{score}/100</b></div>'
             f'<div class="txt">{html.escape(v.explanation)}</div>'
             f'<div class="action"><b>What to do:</b> {html.escape(v.recommended_action)}</div>')
     if v.is_fallback:

@@ -200,9 +200,9 @@ Which checks are useful therefore cannot be decided in advance:
 - **The relevant checks depend on the email.** Link checks are pointless for an email without links and attachment checks are pointless without attachments.
 - **Each result changes what to check next.** A suspicious finding calls for a deeper check, while a clear finding makes further checks unnecessary.
 
-A fixed workflow would run every check on every email. This is slower, sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
+A fixed workflow would run every check on every email. It sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
 
-The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
+The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)). The result is mixed. The agent used fewer than half of the tool calls (2.9 against 6.6) and missed no phishing email, but it raised more false alarms and was not faster, because every step of the agent is a model call, and a model call is much slower than a tool call on a laptop without a graphics card. The agent therefore pays off most when tool calls are expensive (external services, rate limits, privacy) and when a larger or faster model is available.
 
 #### Model Context Protocol (MCP)
 The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The application starts the server once, discovers the tools via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
@@ -331,10 +331,10 @@ The evaluation uses two data sources, because each one covers a different part o
 | Source | Content | Used to evaluate |
 |---|---|---|
 | [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for suspicious senders and links (only one spoofing case uses a free-mail address) | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
-The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
+The evaluation runner can draw a stratified sample of the dataset with a fixed seed (`--zenodo`), so every run sees the same emails. Because every email takes about a minute on a laptop without a graphics card, the reported comparison so far uses only the hand-crafted emails. The Zenodo sample is listed as an open action item.
 Reputation and domain-age results change over time, so the results of the online checks are stored in an evaluation cache and replayed. For the fictional domains they are seeded on purpose (see Decision 8).
 
 Dataset sources and licenses are documented in [`data/README.md`](data/README.md).

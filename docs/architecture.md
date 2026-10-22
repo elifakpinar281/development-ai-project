@@ -56,7 +56,7 @@ The whole architecture follows six rules. They are repeated here because every c
 2. The parser turns the raw text into a ParsedEmail object with sender, reply-to address, authentication headers, subject, body, links and attachment metadata.
 3. The AgentAnalyzer runs the prompt injection scan. Its result is always observation number 1, so the model sees it before it makes any decision.
 4. After that, the agent loop starts. In every step the model receives the email, the list of tools and all observations so far. It answers with a decision, which is either a tool call or the signal to finish. The ToolRegistry checks a proposed call before it runs. An allowed call is executed and its result is added as a new numbered observation. A refused call is not executed. The model receives the reason instead and can choose again.
-5. When the model finishes, or when the step budget is used up, the model writes the final verdict.
+5. When the model finishes, or when the step budget is used up, the model writes the final verdict. This happens in a new conversation that only contains the email and the check results, so the model is not influenced by its own reasons from the investigation.
 6. The VerdictValidator checks the evidence and applies the score bands and safety rules.
 7. The AnalysisService then saves a fingerprint of the verdict to the case history and returns an AnalysisResult to the interface.
 8. The user sees the verdict, the risk score, the evidence, a plain-language explanation, warnings and the full investigation trace.
@@ -129,4 +129,3 @@ The following table lists every failure the application expects and how the user
 | The case history database is not reachable | The lookup returns unavailable and the service catches DatabaseUnavailableError when saving | The result is shown with a warning that it was not saved |
 | Empty, oversized or unreadable input | The AnalysisService raises InvalidEmailInputError | A friendly message and no model call |
 | An unexpected bug | The AnalysisService catches it and logs the traceback | The status failed with a friendly message |
-

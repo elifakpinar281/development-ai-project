@@ -89,11 +89,28 @@ class AgentAnalyzer(ModelAnalyzer):
                 summary=f"Used all {self.max_steps} tool calls. Asking the model to decide.",
             )
 
-        run.messages.append(
-            prompts.user_message(prompts.final_answer_prompt(run.observations, step_limit_reached))
-        )
-        verdict = self._request_verdict(run)
+        verdict = self._request_verdict_with_fresh_context(run, step_limit_reached)
         return self._output(run, verdict)
+
+    def _request_verdict_with_fresh_context(self, run: AnalysisRun, step_limit_reached: bool):
+        if step_limit_reached:
+            opening = "The application has used all its tool calls. Decide with the results below."
+        else:
+            opening = "The application has finished its checks. Decide with the results below."
+        run.messages = [
+            ChatMessage(role="system", content=prompts.SINGLE_PASS_SYSTEM_PROMPT),
+            prompts.user_message(
+                prompts.build_single_pass_message(
+                    email=run.email,
+                    scope=run.scope,
+                    boundary=run.boundary,
+                    max_body_chars=self.max_body_chars,
+                    observations=run.observations,
+                    opening=opening,
+                )
+            ),
+        ]
+        return self._request_verdict(run)
 
 
     def _next_decision(self, run: AnalysisRun) -> AgentDecision:

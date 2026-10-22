@@ -252,13 +252,14 @@ The AgentAnalyzer runs a loop in the ReAct style. The model decides and the appl
 1. The application runs the prompt injection scan and the payment fraud scan, which become observations 1 and 2.
 2. In each step, the model returns either a tool call with its arguments and a one-sentence reason, or the signal to finish.
 3. The application checks the call (Decision 11), runs it and returns the result as a numbered observation.
-4. After finishing, or when the budget is used up, the model writes the final verdict, which is validated (Decision 12).
+4. After finishing, or when the budget is used up, the model writes the final verdict in a new conversation that contains only the email and the results of the checks, not its own reasons from the investigation. The verdict is then validated (Decision 12).
 
 **Rules the application enforces:**
 
 - The budget is six steps. Every decision that is not a finish uses a step, including refused and repeated calls. The loop therefore always ends.
 - The same tool with the same arguments is not run twice. The model is pointed to the earlier observation instead.
 - An invalid answer gets exactly one correction attempt. A second invalid answer ends the run with a ModelError, and the service switches to the fallback.
+- The verdict is requested in a fresh context. During the investigation the model writes a reason for every step, for example "the email contains a suspicious link". In the first version the verdict was requested in the same conversation, so the model read its own guesses again and tended to confirm them. The team evaluation showed a false-positive rate of 0.50 for the agent against 0.00 for the fixed pipeline, which decides with only the email and the check results. The agent now judges the same way, so the investigation chooses the evidence and a separate step weighs it.
 - The arguments of lookup_case_history are always filled in by the application from the email. The model only decides whether to run it.
 - Every analysis creates a fresh run object, so one email can never influence the next one.
 

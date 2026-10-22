@@ -12,8 +12,8 @@
       ],
       "max_risk": 39
     },
-    "actual_result": "",
-    "status": "pending"
+    "actual_result": "Evaluation run with qwen2.5:3b (run_evaluation.py, one run per configuration): agent phishing, risk 75, and llm_only phishing, risk 75. Only the fixed pipeline rated it likely safe, risk 39. The same verdict came from the agent when tried in the UI. The alarming wording (new sign-in, security alert) outweighed the clean checks.",
+    "status": "fail"
   },
   {
     "id": "jaiesh-02",
@@ -29,7 +29,7 @@
       "max_risk": 39,
       "no_warning_observations": true
     },
-    "actual_result": "Run with qwen2.5:3b via the UI (agent, 6 model calls, 103 s). Verdict: likely safe, risk 39 (exactly at the limit). No tool warnings except 'case history unavailable' (Postgres not running locally). Quality note: the explanation wrongly says no deadline is mentioned and one evidence item checks example.com (the recipient domain). The language alone did not trigger a false alarm.",
+    "actual_result": "Run with qwen2.5:3b via the UI (agent, 6 model calls, 103 s). Verdict: likely safe, risk 39 (exactly at the limit). No tool warnings except 'case history unavailable' (Postgres not running locally). Quality note: the explanation wrongly says no deadline is mentioned and one evidence item checks example.com (the recipient domain). The language alone did not trigger a false alarm. In the evaluation run with run_evaluation.py the agent rated the same email phishing, risk 75, so the result is not stable between runs.",
     "status": "pass"
   },
   {
