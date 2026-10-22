@@ -126,6 +126,16 @@ The application code controls which tools exist, validates every tool call, limi
 
 If the model fails (Ollama not running, model not installed, timeout or output that stays invalid after one correction), the application switches to an offline analysis. It runs every check that needs neither the model nor the network and shows a rule-based result that is clearly labelled as a fallback.
 
+## User interface
+
+The interface follows our Figma design. It is still a Gradio app (`python -m app.main`), but the page itself is plain HTML, CSS and JavaScript in `app/frontend/`, rendered by one `gr.HTML` component. The page calls the Python functions in `app/ui.py` through Gradio server functions, and these only call the service layer.
+
+- **Analyze:** paste an email, upload or drop an `.eml` file, pick an installed Ollama model and get the verdict, evidence and investigation trace. Follow-up questions about the email (for example "What if I already clicked?") are answered by the model in `src/services/follow_up.py`, with the email passed as untrusted data.
+- **Previous Chats:** every email analysed while the app is running, with filter and search.
+- **Campaigns:** phishing and suspicious emails of the session that share a sender domain, a link domain or a subject pattern are grouped (`src/services/history.py`).
+
+Previous chats and campaigns are session state. They live only in the running process and are gone after a restart. The persistent case history in PostgreSQL still stores fingerprints only. The fonts (Inter, Inria Serif, DM Serif Display, JetBrains Mono, SIL Open Font License) are bundled in `app/frontend/fonts/`, so the page also works offline. The UI needs Gradio 6.30 or newer: `pip install -U "gradio>=6.30,<7"`.
+
 ## Architecture
 
 The full description with diagrams is in [`docs/architecture.md`](docs/architecture.md). The reasons behind each design choice are in [`docs/project-decisions.md`](docs/project-decisions.md).
@@ -200,9 +210,9 @@ Which checks are useful therefore cannot be decided in advance:
 - **The relevant checks depend on the email.** Link checks are pointless for an email without links and attachment checks are pointless without attachments.
 - **Each result changes what to check next.** A suspicious finding calls for a deeper check, while a clear finding makes further checks unnecessary.
 
-A fixed workflow would run every check on every email. It sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
+A fixed workflow would run every check on every email. This is slower, sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
 
-The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)). The result is mixed. The agent used fewer than half of the tool calls (2.9 against 6.6) and missed no phishing email, but it raised more false alarms and was not faster, because every step of the agent is a model call, and a model call is much slower than a tool call on a laptop without a graphics card. The agent therefore pays off most when tool calls are expensive (external services, rate limits, privacy) and when a larger or faster model is available.
+The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
 
 #### Model Context Protocol (MCP)
 The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The application starts the server once, discovers the tools via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
@@ -331,10 +341,10 @@ The evaluation uses two data sources, because each one covers a different part o
 | Source | Content | Used to evaluate |
 |---|---|---|
 | [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for suspicious senders and links (only one spoofing case uses a free-mail address) | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
-The evaluation runner can draw a stratified sample of the dataset with a fixed seed (`--zenodo`), so every run sees the same emails. Because every email takes about a minute on a laptop without a graphics card, the reported comparison so far uses only the hand-crafted emails. The Zenodo sample is listed as an open action item.
+The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
 Reputation and domain-age results change over time, so the results of the online checks are stored in an evaluation cache and replayed. For the fictional domains they are seeded on purpose (see Decision 8).
 
 Dataset sources and licenses are documented in [`data/README.md`](data/README.md).
@@ -381,14 +391,17 @@ Each case records the expected behaviour, grading rules, the actual result and a
 - A small local model (3B) may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback limit the impact, but they do not eliminate errors.
 - On a computer without a graphics card, the model runs on the processor. In our evaluation with `qwen2.5:3b`, one analysis took between about 40 seconds and 3 minutes, with a median of 77 to 140 seconds depending on the run.
 - The judgement of the 3B model varies between runs and is sensitive to the wording of the prompt. In our evaluation it rated a genuine password reset as phishing in three runs in a row (case-23), and its explanations sometimes contain claims that no check supports. The deterministic checks and safety rules give the same result every time, so we moved the gift card and payment fraud detection into such a check.
+- In our evaluation of the domain checks, the 3B model rated harmless emails as phishing in 6 of 12 runs, judging from the wording alone (for example a normal invoice request), and it did not always call the online checks. The case history is only used when the model calls the lookup.
 - The case history matches on the sender domain. One phishing email from a hacked account of a real organisation can therefore make later genuine emails from that organisation look like a known campaign (case-22). Ignoring the sender domain of well-known domains, as is already done for link domains, would prevent this.
 - The model only sees the first 6,000 characters of the body. The link and attachment checks still use the full email, but wording at the end of a very long email is not analysed by the model.
 - The prompt injection scan uses patterns for typical phrasings. An instruction without such phrases is not detected by the scan. In that case only the step budget, the argument checks and the safety rules protect the analysis.
-- The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk"). Risk values and thresholds are initial, hand-chosen settings.
+- The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk") or a legitimate subdomain that contains a brand name. Ordinary words that are also brands (`office`, `apple`, `zoom`) only count together with an account word such as `login`. Risk values and thresholds are initial, hand-chosen settings.
 - Domain age relies on RDAP. Not every top-level domain publishes RDAP data, so a missing record is only a weak signal, and public RDAP servers can rate-limit requests.
-- The URL reputation check needs a Google Safe Browsing API key, which is free only for non-commercial use, and it sends the checked URL to Google. A URL that is not listed is not proven safe, and very new phishing pages may not be listed yet.
+- The URL reputation check needs a Google Safe Browsing API key, which is free only for non-commercial use, and it sends the checked URL to Google. The key is sent in a request header and never logged. A URL that is not listed is not proven safe, and very new phishing pages may not be listed yet.
 - Online checks that cannot run (timeout, rate limit, missing key) are reported as "unavailable". They reduce the evidence, but the application does not retry automatically.
-- The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Verdicts from the offline fallback are not stored.
+- The case history only reflects earlier verdicts and inherits their errors. Matching by subject pattern can produce false matches for generic subjects. Sender domains of well-known organisations and free-mail providers are not matched. Verdicts from the offline fallback are not stored. The subject hash is not salted, and there is no automatic deletion period.
+- The MCP server uses the same database user as the application. The model cannot write to the history because no write tool exists, not because of database permissions.
+- If the domain tools are unavailable, the user sees a warning that some checks could not run, and the verdict rests on less evidence. In the first evaluation run the model rated a phishing email "likely safe" in 3 of 5 such model runs. In the second run, which also ran the lookalike check in process, it did so in none of 9 runs. When the empty-cache case was repeated, 1 of 3 runs rated it "likely safe" again.
 - Evaluation results for online tools come from a cache. They describe the state at recording time, and results for fictional test domains are seeded assumptions that say nothing about the accuracy of the live services.
 - The full application needs a running PostgreSQL instance (Docker) for the case history. Without it, only that capability is unavailable.
 - The offline fallback runs only checks that need no model and no network. It cannot look up the age of a domain and cannot judge the wording of an email, so a scam without technical indicators can be rated "likely safe" in fallback mode.

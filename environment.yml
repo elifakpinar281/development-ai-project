@@ -9,7 +9,7 @@ dependencies:
   - pip
   - pip:
       - ollama
-      - gradio
+      - "gradio>=6.30,<7" # the UI uses gr.HTML server_functions
       - pydantic
       - python-dotenv
       - pytest
