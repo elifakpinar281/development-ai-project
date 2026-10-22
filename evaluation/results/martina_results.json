@@ -1,0 +1,2196 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "54fb166",
+    "runs": 3,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "martina-01",
+      "category": "successful_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 2,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 54.1,
+      "failed_checks": [
+        "observed:check_url_reputation=warning"
+      ]
+    },
+    {
+      "id": "martina-02",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 54.6,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-03",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 73.5,
+      "failed_checks": [
+        "evidence_cites:check_domain_age",
+        "observed:check_domain_age=warning"
+      ]
+    },
+    {
+      "id": "martina-04",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 5,
+      "median_seconds": 69.2,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-05",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 5,
+      "median_seconds": 101.9,
+      "failed_checks": [
+        "evidence_cites:lookup_case_history",
+        "observed:lookup_case_history=warning"
+      ]
+    },
+    {
+      "id": "martina-06",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 63.7,
+      "failed_checks": [
+        "unavailable:check_domain_age",
+        "warning:Some checks could not run"
+      ]
+    },
+    {
+      "id": "martina-07",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 81.2,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-08",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 76.1,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-09",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 53.3,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-10",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 99.8,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-11",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 75.4,
+      "failed_checks": [
+        "observed:check_lookalike_domain=warning",
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "martina-12",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe",
+        "phishing"
+      ],
+      "median_tool_calls": 0,
+      "median_seconds": 80.2,
+      "failed_checks": [
+        "max_risk",
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "case-06",
+      "category": "successful_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 4,
+      "median_seconds": 84.5,
+      "failed_checks": []
+    },
+    {
+      "id": "case-07",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 71.9,
+      "failed_checks": []
+    },
+    {
+      "id": "case-08",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 4,
+      "median_seconds": 77.7,
+      "failed_checks": []
+    },
+    {
+      "id": "case-09",
+      "category": "successful_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 50.7,
+      "failed_checks": []
+    },
+    {
+      "id": "case-10",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 2,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 49.2,
+      "failed_checks": [
+        "observed:inspect_attachments=warning"
+      ]
+    },
+    {
+      "id": "case-11",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 72.8,
+      "failed_checks": []
+    },
+    {
+      "id": "case-12",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 41.3,
+      "failed_checks": [
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "case-13",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 2,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe",
+        "phishing"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 39.5,
+      "failed_checks": [
+        "max_risk",
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "case-14",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 52.0,
+      "failed_checks": [
+        "observed:check_domain_age=warning"
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "case": "martina-01",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 61304,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_url_reputation=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "observed:check_url_reputation=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-01",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 95.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 54143,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_url_reputation=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-01",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 95.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 51138,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_url_reputation=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-02",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 54630,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_domain_age=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-02",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 53685,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_domain_age=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-02",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 83858,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_lookalike_domain=warning": true,
+        "observed:check_domain_age=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-03",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_url_reputation",
+        "analyze_links"
+      ],
+      "model_calls": 5,
+      "duration_ms": 64322,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:check_domain_age": false,
+        "observed:check_domain_age=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "evidence_cites:check_domain_age",
+        "observed:check_domain_age=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-03",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation",
+        "lookup_case_history"
+      ],
+      "model_calls": 5,
+      "duration_ms": 73491,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:check_domain_age": false,
+        "observed:check_domain_age=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "evidence_cites:check_domain_age",
+        "observed:check_domain_age=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-03",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age",
+        "check_url_reputation",
+        "analyze_links"
+      ],
+      "model_calls": 6,
+      "duration_ms": 87859,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:check_domain_age": true,
+        "observed:check_domain_age=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-04",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "check_domain_age",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 6,
+      "duration_ms": 69349,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": true,
+        "history_row_stored": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-04",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "analyze_links",
+        "check_email_authentication",
+        "lookup_case_history",
+        "check_domain_age"
+      ],
+      "model_calls": 7,
+      "duration_ms": 69233,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": true,
+        "history_row_stored": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-04",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age",
+        "check_lookalike_domain",
+        "check_email_authentication",
+        "check_url_reputation"
+      ],
+      "model_calls": 7,
+      "duration_ms": 62080,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": true,
+        "history_row_stored": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-05",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation",
+        "lookup_case_history"
+      ],
+      "model_calls": 5,
+      "duration_ms": 82906,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:lookup_case_history": true,
+        "observed:lookup_case_history=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-05",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age",
+        "check_email_authentication",
+        "check_lookalike_domain",
+        "check_url_reputation"
+      ],
+      "model_calls": 7,
+      "duration_ms": 101908,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:lookup_case_history": false,
+        "observed:lookup_case_history=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "evidence_cites:lookup_case_history",
+        "observed:lookup_case_history=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-05",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation",
+        "check_domain_age",
+        "check_lookalike_domain",
+        "inspect_attachments"
+      ],
+      "model_calls": 8,
+      "duration_ms": 120670,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "evidence_cites:lookup_case_history": false,
+        "observed:lookup_case_history=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "evidence_cites:lookup_case_history",
+        "observed:lookup_case_history=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-06",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_url_reputation",
+        "analyze_links"
+      ],
+      "model_calls": 5,
+      "duration_ms": 71429,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "unavailable:check_domain_age": false,
+        "warning:Some checks could not run": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "unavailable:check_domain_age"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-06",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 63738,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "unavailable:check_domain_age": false,
+        "warning:Some checks could not run": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "unavailable:check_domain_age"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-06",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 56177,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "unavailable:check_domain_age": false,
+        "warning:Some checks could not run": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "unavailable:check_domain_age",
+        "warning:Some checks could not run"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-07",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 73125,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation.",
+        "Case history is unavailable, so this email was not saved for campaign detection."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "Could not save the case: The case history database is not reachable.",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-07",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "check_domain_age",
+        "analyze_links"
+      ],
+      "model_calls": 5,
+      "duration_ms": 81172,
+      "unavailable_tools": [
+        "check_url_reputation",
+        "check_domain_age"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation, check_domain_age.",
+        "Case history is unavailable, so this email was not saved for campaign detection."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "Could not save the case: The case history database is not reachable.",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-07",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_url_reputation",
+        "inspect_attachments"
+      ],
+      "model_calls": 6,
+      "duration_ms": 81803,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation.",
+        "Case history is unavailable, so this email was not saved for campaign detection."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "Could not save the case: The case history database is not reachable.",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-08",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "inspect_attachments"
+      ],
+      "model_calls": 6,
+      "duration_ms": 76061,
+      "unavailable_tools": [],
+      "warnings": [
+        "Domain checks (lookalike, domain age, reputation, case history) are unavailable because the tool server could not start."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "warning:Domain checks": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-08",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "inspect_attachments"
+      ],
+      "model_calls": 6,
+      "duration_ms": 60379,
+      "unavailable_tools": [],
+      "warnings": [
+        "Domain checks (lookalike, domain age, reputation, case history) are unavailable because the tool server could not start."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "warning:Domain checks": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-08",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "inspect_attachments"
+      ],
+      "model_calls": 6,
+      "duration_ms": 86712,
+      "unavailable_tools": [],
+      "warnings": [
+        "Domain checks (lookalike, domain age, reputation, case history) are unavailable because the tool server could not start."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "warning:Domain checks": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-09",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 44585,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-09",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 53294,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-09",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "analyze_links",
+        "check_email_authentication"
+      ],
+      "model_calls": 5,
+      "duration_ms": 93258,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-10",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "analyze_links",
+        "check_url_reputation"
+      ],
+      "model_calls": 5,
+      "duration_ms": 72722,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_lookalike_domain=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-10",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age",
+        "check_email_authentication",
+        "check_url_reputation",
+        "inspect_attachments",
+        "analyze_links"
+      ],
+      "model_calls": 7,
+      "duration_ms": 99794,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_lookalike_domain=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-10",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 100184,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_lookalike_domain=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "martina-11",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 40625,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:check_lookalike_domain=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "observed:check_lookalike_domain=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "martina-11",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 75373,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:check_lookalike_domain=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "observed:check_lookalike_domain=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "martina-11",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "check_lookalike_domain",
+        "check_lookalike_domain",
+        "check_domain_age"
+      ],
+      "model_calls": 7,
+      "duration_ms": 90107,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:check_lookalike_domain=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "martina-12",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 80249,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "max_risk": false,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "max_risk"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "martina-12",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 7,
+      "duration_ms": 96365,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "max_risk": false,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "max_risk"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "martina-12",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 40483,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-06",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_email_authentication",
+        "analyze_links",
+        "check_lookalike_domain",
+        "check_url_reputation"
+      ],
+      "model_calls": 7,
+      "duration_ms": 100435,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-06",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication"
+      ],
+      "model_calls": 5,
+      "duration_ms": 73060,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-06",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_email_authentication",
+        "analyze_links",
+        "check_lookalike_domain",
+        "check_url_reputation",
+        "inspect_attachments"
+      ],
+      "model_calls": 7,
+      "duration_ms": 84456,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-07",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_email_authentication"
+      ],
+      "model_calls": 6,
+      "duration_ms": 71904,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-07",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_email_authentication",
+        "analyze_links"
+      ],
+      "model_calls": 4,
+      "duration_ms": 79697,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-07",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 67834,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-08",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "inspect_attachments",
+        "check_domain_age",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 7,
+      "duration_ms": 84314,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-08",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments"
+      ],
+      "model_calls": 6,
+      "duration_ms": 59385,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-08",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age",
+        "check_lookalike_domain",
+        "check_email_authentication",
+        "inspect_attachments"
+      ],
+      "model_calls": 7,
+      "duration_ms": 77679,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-09",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 95.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments"
+      ],
+      "model_calls": 4,
+      "duration_ms": 50694,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-09",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments",
+        "check_domain_age",
+        "lookup_case_history",
+        "analyze_links"
+      ],
+      "model_calls": 7,
+      "duration_ms": 64019,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-09",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 95.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments"
+      ],
+      "model_calls": 3,
+      "duration_ms": 34077,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-10",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments",
+        "check_domain_age"
+      ],
+      "model_calls": 5,
+      "duration_ms": 62139,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-10",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 3,
+      "duration_ms": 35573,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "observed:inspect_attachments=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-10",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments",
+        "analyze_links"
+      ],
+      "model_calls": 5,
+      "duration_ms": 49171,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:inspect_attachments=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-11",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "inspect_attachments",
+        "check_domain_age",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 6,
+      "duration_ms": 73305,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-11",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 71761,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-11",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 72829,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-12",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 41268,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "case-12",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 38642,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "case-12",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 6,
+      "duration_ms": 75959,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "case-13",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 32846,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "max_risk": false,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "max_risk"
+      ],
+      "passed": false,
+      "wrong_verdict": true
+    },
+    {
+      "case": "case-13",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments"
+      ],
+      "model_calls": 3,
+      "duration_ms": 39547,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-13",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments",
+        "check_domain_age",
+        "check_email_authentication"
+      ],
+      "model_calls": 5,
+      "duration_ms": 52940,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-14",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 90.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation",
+        "lookup_case_history",
+        "inspect_attachments",
+        "check_domain_age"
+      ],
+      "model_calls": 7,
+      "duration_ms": 82614,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-14",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_email_authentication",
+        "lookup_case_history"
+      ],
+      "model_calls": 5,
+      "duration_ms": 52048,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "observed:check_domain_age=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    },
+    {
+      "case": "case-14",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "analyze_links"
+      ],
+      "model_calls": 4,
+      "duration_ms": 50724,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "observed:check_domain_age=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "observed:check_domain_age=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false
+    }
+  ]
+}
