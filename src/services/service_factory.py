@@ -101,8 +101,8 @@ def build_components(
             sources.append(domain_source)
         else:
             startup_warnings.append(
-                "Domain checks (lookalike, domain age, reputation, case history) are unavailable "
-                "because the tool server could not start."
+                "Domain checks (domain age, reputation, case history) are unavailable "
+                "because the tool server could not start. The lookalike check still ran."
             )
 
     registry = ToolRegistry(sources, argument_fillers={"lookup_case_history": case_history_arguments})

@@ -124,6 +124,12 @@ def grade(g: dict, result: AnalysisResult, new_rows: int) -> dict[str, bool]:
             checks[f"evidence_cites:{tool}"] = any(f" {tool}]" in item for item in verdict.evidence)
         for tool in g.get("unavailable_includes", []):
             checks[f"unavailable:{tool}"] = tool in verdict.unavailable_tools
+    if g.get("unavailable_if_called"):
+        called = [o.result for o in result.observations if o.result.tool_name in g["unavailable_if_called"]]
+        checks["called_online_checks_unavailable"] = all(r.status == "unavailable" for r in called)
+        if called:
+            checks["warning:Some checks could not run"] = any(
+                "Some checks could not run" in w for w in result.warnings)
     observed = [(o.result.tool_name, o.result.status) for o in result.observations]
     for tool, status in g.get("require_observations", []):
         checks[f"observed:{tool}={status}"] = (tool, status) in observed
@@ -156,6 +162,15 @@ def run_trial(case: dict, number: int) -> dict:
     new_rows = history_rows() - before
     checks = grade(g, result, new_rows)
     verdict = result.verdict
+    g_ = case["grading"]
+    if verdict is None:
+        wrong = None
+    elif "verdict_in" in g_:
+        wrong = verdict.verdict not in g_["verdict_in"]
+    elif g_.get("phishing_email"):
+        wrong = verdict.verdict == "likely safe"
+    else:
+        wrong = None
     return {
         "case": case["id"], "trial": number, "status": result.status.value,
         "valid_for_model_eval": result.status == AnalysisStatus.COMPLETED,
@@ -169,7 +184,19 @@ def run_trial(case: dict, number: int) -> dict:
         "fallback_reason": COLLECTOR.reasons[-1] if COLLECTOR.reasons else "",
         "failed_checks": [name for name, ok in checks.items() if not ok],
         "passed": all(checks.values()),
+        "wrong_verdict": wrong,
+        "explanation": verdict.explanation if verdict else "",
     }
+
+def print_wrong_verdicts(trials: list[dict]) -> None:
+    valid = [t for t in trials if t["valid_for_model_eval"]]
+    fallback = [t for t in trials if not t["valid_for_model_eval"]]
+    count = lambda rows: sum(1 for t in rows if t.get("wrong_verdict"))
+    print(f"\nWrong verdict: model runs {count(valid)} of {len(valid)}, "
+          f"fallback runs {count(fallback)} of {len(fallback)}")
+    for t in trials:
+        if t.get("wrong_verdict"):
+            print(f"  {t['case']} run {t['trial']} ({t['status']}): {t['verdict']}")
 
 
 def summarise(cases: list[dict], trials: list[dict]) -> list[dict]:
@@ -301,6 +328,7 @@ def main() -> None:
                                    ensure_ascii=False) + "\n", encoding="utf-8")
     print_markdown(rows, meta)
     print_totals(trials, selected)
+    print_wrong_verdicts(trials)
     if args.write_cases:
         write_back(args.cases, cases, rows)
 

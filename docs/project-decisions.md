@@ -107,7 +107,7 @@ The four domain and memory tools (`check_lookalike_domain`, `check_domain_age`, 
 - The server is an additional process, started once per investigation. This costs start-up time per run.
 - The SDK's default environment for child processes drops variables such as `DATABASE_URL`, so the client passes the environment on explicitly.
 - We pin `mcp>=1.2,<2`. Version 2 of the SDK renamed the server API, and our code and the course examples use the v1 API.
-- The offline fallback must work even if MCP is down. It therefore calls `check_lookalike_domain` directly as a Python function.
+- The lookalike check needs no network, so the application also runs it directly in process before the model starts (observation 3, same function as the MCP tool), and the offline fallback uses it too. The model can still call the MCP tool for single domains. In the first evaluation run the model skipped the check in 2 of 8 valid runs on lookalike cases, although it is the cheapest and most reliable check.
 - **Tool descriptions are the model's only guide:** The prompt lists every tool by name and description, and for MCP tools the description is the docstring of the server function. A review found that the four domain tools had no docstring, so the model saw only their names. In the first evaluation run it skipped the lookalike check in 2 of 8 valid runs on lookalike cases, which this probably contributed to. Each tool now has a short description of what it checks and when it is useful, and a test checks that every tool of the server has one.
 
 ---
@@ -134,7 +134,7 @@ Validated verdicts are stored as fingerprints in a PostgreSQL table (`case_histo
 **Trade-offs:**
 - Docker (or a local PostgreSQL) is now required to run the full application.
 - If the database is unavailable, `lookup_case_history` returns `unavailable` and saving a verdict raises a controlled `DatabaseUnavailableError`. The analysis itself continues without the history.
-- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. In the evaluation, the repeated-campaign case `martina-05` needed a median of [3.5] tool calls, compared with [3] for the first email of the campaign (`martina-04`), so we cannot claim that the case history reduces the number of checks. It also depends on the model completing an analysis and saving a validated verdict, because fallback verdicts are not stored.
+- The history can only be as good as past verdicts. Campaign matching by subject can also produce false matches for generic subjects. In the evaluation, the repeated-campaign case `martina-05` needed a median of 5 tool calls, the same as the first email of the campaign (`martina-04`), so we cannot claim that the case history reduces the number of checks. The model also used it unreliably: the lookup was observed with a warning in only 1 of 3 runs of `martina-05`. In the harmless email `martina-11`, which shares its subject pattern with an earlier phishing case, the model never called the lookup, so the false match for generic subjects was not exercised. The history also depends on the model completing an analysis and saving a validated verdict, because fallback verdicts are not stored.
 - Verdicts from the offline fallback are not stored, so the case history is only filled when the AI model was used. The repeated-campaign evaluation cases therefore need the model.
 ---
 
@@ -212,6 +212,7 @@ The two online tools (domain age and URL reputation) can run in three modes, set
 - The cache reflects the state at recording time. It shows how the application behaves with those results, not how accurate the live services are today.
 - Seeded results for fictional domains are assumptions that we define ourselves. This is documented, and we do not use them to claim the quality of the real services.
 - The history of earlier verdicts must be reset before a run (or disabled), otherwise earlier runs influence later ones. Only the repeated-campaign cases rely on the history on purpose.
+- In replay mode the cache is stored in the same database as the case history. In the "database down" case, the cached tools are therefore unavailable too, while in normal operation only the case history would be affected.
 
 ---
 
@@ -224,7 +225,7 @@ The two online tools (domain age and URL reputation) can run in three modes, set
   - Privacy: the case history has no body column and stores no body text.
   - Memory: campaign match through a subject variant, ignored brand links, fallback verdicts not stored, writing can be disabled, controlled error if the database is down.
   - Evaluation cache: record, then replay, cache miss, seeding.
-    - MCP: the server lists exactly the four tools, each with a description, the write function is not exposed, the synchronous client works and unknown tools are rejected.
+  - MCP: the server lists exactly the four tools, each with a description, the write function is not exposed, the synchronous client works and unknown tools are rejected.
   - **Hand-crafted evaluation cases:** 21 cases in `evaluation/martina_test_cases.json` (12 `martina-*` cases for domain checks and case history, 9 `case-*` cases for attachments, prompt injection and fraud). Graders are code-based and critical cases are reported separately. Results: `evaluation/evaluation_results.md`.
   - Secrets: the Safe Browsing key is sent in a header and not in the URL, the `httpx` and `httpcore` loggers are silenced, and the configuration `repr` hides the key and the database URL.
   - Lookalike rules: a brand in a subdomain (also with confusable letters and inside a URL), generic brand words alone and together with an account word, and known subdomains such as `login.hamk.fi` as clean cases.
