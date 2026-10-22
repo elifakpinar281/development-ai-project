@@ -24,7 +24,7 @@ All three use the same prompts, the same verdict validation and the same safety 
 
 There are two kinds of input.
 
-The hand-crafted cases are .eml files in the folder cases. Their ground truth is listed in eval_cases.json. Every entry has an id, the file, the label phishing or legitimate, a category and a short note. To add a case, put the .eml file into the folder and add an entry to the list. The false positive rate can only be computed when there are legitimate cases as well.
+The hand-crafted cases are .eml files in the folder cases. Their ground truth is listed in eval_cases.json and eval_cases_extra.json (35 labelled emails in total, 25 phishing and 10 legitimate). Every entry has an id, the file, the label phishing or legitimate, a category and a short note. To add a case, put the .eml file into the folder and add an entry to the list. The false positive rate can only be computed when there are legitimate cases as well.
 
 The Zenodo sample is drawn from `data/phishing_validation_emails.csv`. It is stratified, so half of it is phishing and half is legitimate, and the seed makes it repeatable. These emails have no headers, so they test the language-based part of the analysis.
 
@@ -61,7 +61,9 @@ python -m evaluation.seed_cache
 python -m evaluation.run_evaluation --cache replay
 ```
 
-The option suspicious-as decides how a suspicious verdict is counted. The default is phishing, because the user is then warned. The option write-history is off by default, so earlier runs cannot influence later ones. Only the repeated campaign case 05-campaign-repeat needs it, and 04-campaign-first must be analysed first. Further options are no-domain-server, seed and output.
+Further options: `--configs` (for example `--configs agent llm_only`), `--only` (comma separated case ids), `--limit`, `--model` (for example `--model qwen3:8b`), `--no-hand-crafted`, `--no-domain-server`, `--seed`, `--output` and `--write-history`. The option write-history is off by default, so earlier runs cannot influence later ones. Only the repeated campaign case 05-campaign-repeat needs it, and 04-campaign-first must be analysed first.
+
+**How verdicts become labels.** The application gives three verdicts, but the datasets have two labels. By default, `phishing` and `suspicious` both count as phishing and `likely safe` counts as legitimate, because the user is warned in both of the first two cases. The option `--suspicious-as legitimate` counts a suspicious verdict as legitimate instead, which is the stricter way to measure. Offline fallback runs are included in the main tables, because the user sees that verdict too. A second table counts only the runs where the model answered.
 
 Without a graphics card, qwen2.5:3b needs about a minute per email and configuration, and qwen3:8b around three minutes. Start with a few cases.
 
@@ -73,20 +75,13 @@ python -m scripts.try_agent "evaluation/cases/19-*.eml"
 
 ## Grading the behaviour test cases
 
-The script grade_cases runs every test case that has an .eml file and grading rules, and checks the rules automatically. A case passes only when every rule holds. When the model fails and the offline fallback answers, the case is marked partial at best.
+The behaviour test cases of Martina are graded automatically by `run_martina_eval.py`. It needs PostgreSQL and the evaluation database, runs every case several times and checks the grading rules in `martina_test_cases.json`. A case passes only when every rule holds. When the model fails and the offline fallback answers, the run is reported as a fallback and not as a model result.
 
 ```bash
-# cases 19 to 30
-python -m evaluation.grade_cases --cases evaluation/elif_test_cases.json
-
-# the cases of Martina
-python -m evaluation.grade_cases --cases evaluation/martina_test_cases.json
-
-# selected cases, three runs each to check that the results are stable
-python -m evaluation.grade_cases --only case-21 case-25 --runs 3
+python -m evaluation.run_martina_eval --runs 3 --write-cases
 ```
 
-Cases with a special scenario, such as a stopped database, and failure cases without an .eml file are listed as not run. They are covered by automated tests or need a manual setup. The script writes results.md and results.json to a new folder results/grading-date-time. The case history is not written during grading.
+The cases of Elif, Riana and Jaiesh were run one by one and compared by hand with the expected behaviour in `elif_test_cases.json`, `riana_test_cases.json` and `jaiesh_test_cases.json`. Cases with a special scenario, such as a stopped database, and failure cases without an .eml file are covered by automated tests or need a manual setup. The case history is not written during grading.
 
 ## Results
 
