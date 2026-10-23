@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "model": "qwen3:8b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-23",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-27",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "suspicious"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 237.7,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-27",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "suspicious",
+      "risk": 65.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 237681,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email has several warning signs. The domain hamk-staff-news.example is very new (registered 6 days ago) and resembles a legitimate domain hamk.fi, which is a red flag. The email also contains repetitive content, which is unusual and may indicate a template or automated message."
+    }
+  ]
+}

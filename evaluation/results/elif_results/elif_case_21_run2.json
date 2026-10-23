@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-21",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 0,
+      "median_seconds": 62.8,
+      "failed_checks": [
+        "verdict_in"
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-21",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 62835,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email does not contain any clear phishing indicators such as urgent deadlines, requests for personal information, or instructions aimed at AI tools. The domain used is a known Microsoft domain, and the email does not request any sensitive actions or payments."
+    }
+  ]
+}

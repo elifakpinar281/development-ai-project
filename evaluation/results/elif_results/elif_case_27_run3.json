@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-27",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "suspicious"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 85.1,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-27",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "suspicious",
+      "risk": 50.0,
+      "safety_rules": [
+        "high_risk_finding"
+      ],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 85122,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any suspicious instructions or requests for money, and the domain is similar to a known domain (hamk.fi). However, the domain is also long-registered and the email does not contain any urgent or threatening language. SpotThePhish raised this verdict to \"suspicious\" because at least one check reported a high-risk warning."
+    }
+  ]
+}
