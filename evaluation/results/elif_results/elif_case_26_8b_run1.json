@@ -1,0 +1,55 @@
+{
+  "meta": {
+    "model": "qwen3:8b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-23",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-26",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "suspicious"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 185.3,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-26",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "suspicious",
+      "risk": 65.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_url_reputation"
+      ],
+      "model_calls": 4,
+      "duration_ms": 185269,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The domain is very new (registered 3 days ago) and resembles a legitimate domain (hamk.fi), which is a warning sign. The email creates urgency by claiming the password will expire soon and threatens account suspension if action is not taken."
+    }
+  ]
+}

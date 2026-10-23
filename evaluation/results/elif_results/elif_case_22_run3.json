@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-22",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 80.3,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-22",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_domain_age",
+        "lookup_case_history"
+      ],
+      "model_calls": 5,
+      "duration_ms": 80279,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any phishing attempts, as it only links to the sender's own domain and does not request any personal information or payment. The checks confirm the domain is legitimate and the email does not contain any suspicious instructions or requests for action."
+    }
+  ]
+}

@@ -1,0 +1,538 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "54fb166",
+    "runs": 3,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "martina-06",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe",
+        "phishing"
+      ],
+      "median_tool_calls": 4,
+      "median_seconds": 76.2,
+      "failed_checks": []
+    },
+    {
+      "id": "martina-11",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 0,
+      "median_seconds": 39.9,
+      "failed_checks": [
+        "observed:lookup_case_history=warning",
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "martina-12",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 3,
+      "valid": 3,
+      "passed": 3,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 0,
+      "median_seconds": 32.2,
+      "failed_checks": []
+    },
+    {
+      "id": "case-12",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 3,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 41.1,
+      "failed_checks": [
+        "verdict_in"
+      ]
+    },
+    {
+      "id": "case-13",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 3,
+      "valid": 2,
+      "passed": 2,
+      "fallback": 1,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 0.5,
+      "median_seconds": 39.7,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "martina-06",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "check_lookalike_domain",
+        "check_email_authentication",
+        "inspect_attachments"
+      ],
+      "model_calls": 7,
+      "duration_ms": 111920,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "called_online_checks_unavailable": true,
+        "warning:Some checks could not run": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": null,
+      "explanation": "The email contains a suspicious link to a domain that does not match known lookalike domains. The URL reputation check is unavailable, and the email does not contain any urgent requests or threats. The email is from a known domain but the link leads to a different domain, which is a common phishing tactic."
+    },
+    {
+      "case": "martina-06",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 85.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 4,
+      "duration_ms": 50106,
+      "unavailable_tools": [
+        "check_domain_age"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_domain_age."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "called_online_checks_unavailable": true,
+        "warning:Some checks could not run": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": null,
+      "explanation": "The email contains a suspicious link to an invoice portal with a domain that lacks SPF, DKIM, and DMARC records. The domain does not match any known brands or domains, and the email does not mention any urgency or threats. The email also does not request any sensitive information such as passwords or payment details."
+    },
+    {
+      "case": "martina-06",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_url_reputation",
+        "check_email_authentication",
+        "inspect_attachments",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 7,
+      "duration_ms": 76181,
+      "unavailable_tools": [
+        "check_domain_age",
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_domain_age, check_url_reputation."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "called_online_checks_unavailable": true,
+        "warning:Some checks could not run": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": null,
+      "explanation": "The email does not contain any suspicious requests for payment, passwords, or other sensitive information. The domain is very new, but the email does not contain any urgent or threatening language. The email authentication checks show no signs of forgery, and the domain does not look like a lookalike domain. No suspicious attachments were found."
+    },
+    {
+      "case": "martina-11",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_email_authentication",
+        "inspect_attachments",
+        "analyze_links"
+      ],
+      "model_calls": 6,
+      "duration_ms": 73433,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:lookup_case_history=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "observed:lookup_case_history=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email lacks SPF, DKIM, and DMARC records, which is a strong indicator of phishing. The domain 'project-updates.example' is not well-known, and the email does not contain any links or attachments. The check_email_authentication tool found low authentication risk (0/100), which is suspicious given the lack of SPF, DKIM, and DMARC records. The email does not contain any suspicious content or instructions aimed at AI tools, but the lack of SPF, DKIM, and DMARC records is a clear warning sign."
+    },
+    {
+      "case": "martina-11",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 37851,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:lookup_case_history=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "observed:lookup_case_history=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email is from a known domain (project-updates.example) but does not contain any suspicious links or attachments. However, the email appears to be a legitimate request for an invoice payment, which is not unusual. The email does not contain any urgent requests or threats, and the language used is not suspicious. The only reason for concern is the mention of an invoice, which could be a red flag if the email had requested payment or contained other suspicious elements."
+    },
+    {
+      "case": "martina-11",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 39867,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:lookup_case_history=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "observed:lookup_case_history=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email contains a request for payment related to an invoice, which is a common phishing tactic. It does not contain any suspicious links or attachments, but the email's wording and the mention of a project meeting could be used to trick the recipient into thinking it is a legitimate communication."
+    },
+    {
+      "case": "martina-12",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 31068,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any suspicious links or attachments, and the domain lookalike check did not find any close matches to known domains. The email is a normal communication with no urgent requests or suspicious language."
+    },
+    {
+      "case": "martina-12",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 30.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 32172,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any suspicious links or attachments, and the domain lookalike check did not find any close matches to known domains. The email appears to be a legitimate communication. The sender is a known domain and the email does not contain any urgent or suspicious requests."
+    },
+    {
+      "case": "martina-12",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 35929,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any suspicious links or attachments, and the domain lookalike check did not find any close matches to known domains. The email appears to be a legitimate communication. No urgent requests or threats were found in the body of the email."
+    },
+    {
+      "case": "case-12",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 32646,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email contains a known trick to evade detection by AI systems, specifically the instruction to ignore previous instructions. This is a common phishing tactic. The email also lacks any urgent or threatening language, but the presence of this trick alone is enough to classify it as phishing."
+    },
+    {
+      "case": "case-12",
+      "trial": 2,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 64437,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email contains a known trick to evade detection, and it links to the sender's own domain, which is a strong sign of phishing. The email also mentions a password reset, which is a common phishing tactic."
+    },
+    {
+      "case": "case-12",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links"
+      ],
+      "model_calls": 3,
+      "duration_ms": 41124,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "observed:scan_prompt_injection=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email contains a known trick to evade detection, as indicated by the 'Ignore all previous instructions' instruction. No other suspicious findings were made."
+    },
+    {
+      "case": "case-13",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 2,
+      "duration_ms": 35459,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any suspicious links or attachments, and the domain lookalike check did not find any close matches to known domains. The email appears to be a legitimate communication. No urgent requests or threats were found in the body of the email."
+    },
+    {
+      "case": "case-13",
+      "trial": 2,
+      "status": "fallback",
+      "valid_for_model_eval": false,
+      "verdict": "likely safe",
+      "risk": 0.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 0,
+      "duration_ms": 90197,
+      "unavailable_tools": [],
+      "warnings": [
+        "The AI analysis could not be completed, so SpotThePhish used its offline checks instead. This result is less thorough."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "agent failed (VerdictValidationError: Evidence item 2 quotes \"Lecture_Schedule.pdf\", but this text does not appear in the email. Copy the words exactly or cite a tool observation instead.); using offline_fallback",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The AI model was not available, so SpotThePhish ran only its offline checks (6 ran). None of them raised a warning. Language-based signs such as urgency or requests for passwords were not analysed, so treat this result with extra care."
+    },
+    {
+      "case": "case-13",
+      "trial": 3,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "inspect_attachments"
+      ],
+      "model_calls": 3,
+      "duration_ms": 43880,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "observed:check_lookalike_domain=success": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email contains a single safe PDF attachment with a lecture schedule, which is a common and expected content for a course coordinator's message. The email does not contain any suspicious instructions or requests for money, passwords, or other sensitive information. The authentication checks were inconclusive, but the email's wording does not contain any urgent or threatening language."
+    }
+  ]
+}

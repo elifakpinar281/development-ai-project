@@ -1,0 +1,69 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-23",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 95.5,
+      "failed_checks": [
+        "max_risk",
+        "verdict_in"
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-23",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 75.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "analyze_links",
+        "check_url_reputation",
+        "check_domain_age"
+      ],
+      "model_calls": 7,
+      "duration_ms": 95538,
+      "unavailable_tools": [
+        "check_url_reputation",
+        "check_domain_age"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation, check_domain_age."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": false,
+        "max_risk": false,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "verdict_in",
+        "max_risk"
+      ],
+      "passed": false,
+      "wrong_verdict": true,
+      "explanation": "The email contains a request to reset a password, which is unusual and suspicious. The link provided is to a GitHub password reset page, which is a known domain. However, the email does not mention any urgency or threats, and the checks did not find any suspicious activity."
+    }
+  ]
+}

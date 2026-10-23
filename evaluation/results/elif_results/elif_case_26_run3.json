@@ -1,0 +1,52 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-26",
+      "category": "successful_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 0,
+      "passed": 0,
+      "fallback": 1,
+      "verdicts": [],
+      "median_tool_calls": null,
+      "median_seconds": null,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-26",
+      "trial": 1,
+      "status": "fallback",
+      "valid_for_model_eval": false,
+      "verdict": "suspicious",
+      "risk": 60.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 0,
+      "duration_ms": 148013,
+      "unavailable_tools": [],
+      "warnings": [
+        "The AI analysis could not be completed, so SpotThePhish used its offline checks instead. This result is less thorough."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "agent failed (VerdictValidationError: Evidence item 6 quotes \"Hei, salasanasi vanhenee tänään\", but this text does not appear in the email. Copy the words exactly or cite a tool observation instead.; Evidence item 7 quotes \"Vahvista tunnuksesi heti tänään\", but this text does not appear in the email. Copy the words exactly or cite a tool observation instead.; Evidence item 8 quotes \"Ystövääni terveisin\", but this text does not appear in the email. Copy the words exactly or cite a tool observation instead.); using offline_fallback",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The AI model was not available, so SpotThePhish ran only its offline checks (6 ran). 1 of them raised a warning. See the evidence list. Language-based signs such as urgency or requests for passwords were not analysed, so treat this result with extra care."
+    }
+  ]
+}

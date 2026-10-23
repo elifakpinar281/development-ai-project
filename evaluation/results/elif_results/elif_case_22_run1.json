@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "690bd95",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-22",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "likely safe"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 119.7,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-22",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "likely safe",
+      "risk": 39.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_url_reputation",
+        "inspect_attachments",
+        "analyze_links"
+      ],
+      "model_calls": 5,
+      "duration_ms": 119693,
+      "unavailable_tools": [
+        "check_url_reputation"
+      ],
+      "warnings": [
+        "Some checks could not run, so this result is less certain: check_url_reputation."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "max_risk": true,
+        "no_warning_observations": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email does not contain any phishing attempts, as no instructions aimed at AI tools were found, and the domain matches a known domain. There are no suspicious links or requests for payment or personal information."
+    }
+  ]
+}

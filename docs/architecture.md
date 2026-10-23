@@ -5,10 +5,11 @@ This document explains how SpotThePhish is built. It describes the layers of the
 
 ## 1. System Overview & Extended Architecture
 
-SpotThePhish extends the course starter template with three integrated AI capabilities:
+SpotThePhish extends the course starter template with four integrated AI capabilities:
 1. **Agentic Workflow:** The model decides which check to run next, based on the observations so far.
 2. **Tool Integration:** Read-only security checks deliver facts about the email, such as authentication results, link targets and domain age.
-3. **Memory / Persistent State:** A case history in PostgreSQL stores a small fingerprint of every validated verdict, so that repeated phishing campaigns can be recognised.
+3. **Model Context Protocol (MCP):** The four domain and history checks, which depend on external systems (RDAP, Google Safe Browsing, PostgreSQL), run in a separate MCP server. The application discovers them with `list_tools()` and calls them through an MCP client.
+4. **Memory / Persistent State:** A case history in PostgreSQL stores a small fingerprint of every validated verdict, so that repeated phishing campaigns can be recognised.
 
 The model never acts on its own. It only proposes the next step. The application decides whether that step is allowed, runs it and checks the final answer before the user sees it.
 
@@ -19,7 +20,7 @@ The model never acts on its own. It only proposes the next step. The application
 The application follows the layered architecture from the course. Each layer only talks to the layer below it.
 
 ### Presentation layer
-The presentation layer is the Gradio interface in app/ui.py. It takes the pasted email or the uploaded .eml file and shows the result. It calls a single function of the service layer, analyze_email, and never talks to the model or to a tool directly.
+The presentation layer is the Gradio interface in app/ui.py with the page in app/frontend. It takes the pasted email or the uploaded .eml file and shows the result. It only calls functions of the service layer and never talks to the model or to a tool directly. For an analysis it calls analyze_email. For the extra features of the interface it calls three small services: model_choice.py picks the Ollama model the user selected, history.py keeps the analyses and campaigns of the current session, and follow_up.py answers follow-up questions about an analysed email. The session history lives only in memory and is gone after a restart, unlike the persistent case history.
 
 
 ### Application layer
@@ -27,7 +28,7 @@ The application layer contains the AnalysisService in src/services/ai_service.py
 
 
 ### Analysis layer
-The analysis layer contains the AgentAnalyzer and its helpers. The prompt injection scan looks for instructions aimed at AI tools inside the email. The ToolRegistry checks every tool call the model proposes. The VerdictValidator and the verdict policy check the final answer. The OfflineAnalyzer produces a rule-based result when the model is not available.
+The analysis layer contains the AgentAnalyzer and its helpers. The prompt injection scan looks for instructions aimed at AI tools inside the email. The payment fraud scan looks for requests for money, gift cards, bank details or codes combined with pressure or secrecy. The ToolRegistry checks every tool call the model proposes. The VerdictValidator and the verdict policy check the final answer. The OfflineAnalyzer produces a rule-based result when the model is not available.
 
 
 ### Tools
@@ -54,9 +55,9 @@ The whole architecture follows six rules. They are repeated here because every c
 
 1. The AnalysisService checks the input. Empty text and text above the size limit are rejected at once, without a model call.
 2. The parser turns the raw text into a ParsedEmail object with sender, reply-to address, authentication headers, subject, body, links and attachment metadata.
-3. The AgentAnalyzer runs the prompt injection scan. Its result is always observation number 1, so the model sees it before it makes any decision.
+3. The AgentAnalyzer runs three deterministic scans: the prompt injection scan, the payment fraud scan and the offline lookalike check. Their results are always observations 1 to 3, so the model sees them before it makes any decision.
 4. After that, the agent loop starts. In every step the model receives the email, the list of tools and all observations so far. It answers with a decision, which is either a tool call or the signal to finish. The ToolRegistry checks a proposed call before it runs. An allowed call is executed and its result is added as a new numbered observation. A refused call is not executed. The model receives the reason instead and can choose again.
-5. When the model finishes, or when the step budget is used up, the model writes the final verdict.
+5. When the model finishes, or when the step budget is used up, the model writes the final verdict. This happens in a new conversation that only contains the email and the check results, so the model is not influenced by its own reasons from the investigation.
 6. The VerdictValidator checks the evidence and applies the score bands and safety rules.
 7. The AnalysisService then saves a fingerprint of the verdict to the case history and returns an AnalysisResult to the interface.
 8. The user sees the verdict, the risk score, the evidence, a plain-language explanation, warnings and the full investigation trace.
@@ -129,4 +130,3 @@ The following table lists every failure the application expects and how the user
 | The case history database is not reachable | The lookup returns unavailable and the service catches DatabaseUnavailableError when saving | The result is shown with a warning that it was not saved |
 | Empty, oversized or unreadable input | The AnalysisService raises InvalidEmailInputError | A friendly message and no model call |
 | An unexpected bug | The AnalysisService catches it and logs the traceback | The status failed with a friendly message |
-

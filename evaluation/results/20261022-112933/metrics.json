@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "76d324d",
+    "date": "2026-10-22",
+    "cache": "off",
+    "suspicious_as": "phishing",
+    "emails": 35,
+    "seed": 42,
+    "configs": [
+      "agent"
+    ],
+    "total_minutes": 43.8
+  },
+  "all": {
+    "agent": {
+      "all_runs": {
+        "runs": 35,
+        "answered": 35,
+        "tp": 21,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "accuracy": 0.886,
+        "precision": 1.0,
+        "recall": 0.84,
+        "f1": 0.913,
+        "false_positive_rate": 0.0,
+        "fallback_runs": 2,
+        "no_answer_runs": 0,
+        "median_latency_s": 72.4,
+        "mean_model_calls": 5,
+        "mean_tool_calls": 2.9,
+        "runs_with_invalid_output": 1
+      },
+      "model_runs_only": {
+        "runs": 33,
+        "answered": 33,
+        "tp": 19,
+        "fp": 0,
+        "tn": 10,
+        "fn": 4,
+        "accuracy": 0.879,
+        "precision": 1.0,
+        "recall": 0.826,
+        "f1": 0.905,
+        "false_positive_rate": 0.0,
+        "fallback_runs": 0,
+        "no_answer_runs": 0,
+        "median_latency_s": 71.4,
+        "mean_model_calls": 5.3,
+        "mean_tool_calls": 3.0,
+        "runs_with_invalid_output": 1
+      }
+    }
+  },
+  "by_source": {
+    "hand-crafted": {
+      "agent": {
+        "all_runs": {
+          "runs": 35,
+          "answered": 35,
+          "tp": 21,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "accuracy": 0.886,
+          "precision": 1.0,
+          "recall": 0.84,
+          "f1": 0.913,
+          "false_positive_rate": 0.0,
+          "fallback_runs": 2,
+          "no_answer_runs": 0,
+          "median_latency_s": 72.4,
+          "mean_model_calls": 5,
+          "mean_tool_calls": 2.9,
+          "runs_with_invalid_output": 1
+        },
+        "model_runs_only": {
+          "runs": 33,
+          "answered": 33,
+          "tp": 19,
+          "fp": 0,
+          "tn": 10,
+          "fn": 4,
+          "accuracy": 0.879,
+          "precision": 1.0,
+          "recall": 0.826,
+          "f1": 0.905,
+          "false_positive_rate": 0.0,
+          "fallback_runs": 0,
+          "no_answer_runs": 0,
+          "median_latency_s": 71.4,
+          "mean_model_calls": 5.3,
+          "mean_tool_calls": 3.0,
+          "runs_with_invalid_output": 1
+        }
+      }
+    }
+  }
+}

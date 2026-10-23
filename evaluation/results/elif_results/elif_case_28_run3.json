@@ -1,0 +1,57 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-28",
+      "category": "failure_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 67.9,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-28",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 100.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_email_authentication"
+      ],
+      "model_calls": 4,
+      "duration_ms": 67912,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_email_authentication=warning": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email contains a request for sensitive information (bank details) and suspicious domain similarities. The email also fails SPF, DKIM, and DMARC authentication, which is a strong indicator of phishing."
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "meta": {
+    "model": "qwen3:8b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-23",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-21",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "suspicious"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 159.1,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-21",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "suspicious",
+      "risk": 65.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 159094,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email is suspicious because the domain was registered only 4 days ago, which is a red flag for phishing. The email also includes a link to a domain that appears to be related to the sender but is not a legitimate Microsoft domain. There is no urgency or threat, but the request to renew a license could be a tactic to trick users into clicking a malicious link."
+    }
+  ]
+}

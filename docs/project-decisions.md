@@ -34,11 +34,11 @@ We use `qwen2.5:3b`, running locally through Ollama. The model is set through th
 
 **Why we chose this:**
 - **Privacy:** Emails can contain personal and confidential data. Running the model locally keeps the email and its analysis on the user's machine instead of sending it to a third-party API.
-- **Waiting time:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, because the agent needs several model calls. A user who wants to know whether to click a link will not wait that long. `qwen2.5:3b` needs about 60 seconds for the same analysis.
+- **Waiting time:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes (median 161 to 172 seconds in our evaluation runs), because the agent needs several model calls. A user who wants to know whether to click a link will not wait that long. `qwen2.5:3b` needs about 1 to 2 minutes for the same analysis (median 72 to 115 seconds, depending on the run).
 - **The application does the safety work:** The facts come from deterministic tools, every decision is validated, every evidence item must be grounded and the safety rules cannot be overridden. The model mainly chooses checks, reads the language of the email and explains the result, so a small model is sufficient. The larger model still judges difficult emails better, so the choice is a trade-off between speed and accuracy (see Evaluation below).
 - **Structured output:** Our agent loop needs reliable JSON decisions and a schema-conformant final report. Qwen2.5 and Qwen3 both support structured output in Ollama.
 - **Configurability:** Because the model is set via environment variables, we can compare `qwen2.5:3b` and `qwen3:8b` without changing the application.
-- **Evaluation:** We ran our test emails with both models and the same code. `qwen3:8b` passed 9 of 10 without a false alarm, `qwen2.5:3b` 6 of 10, but the 8B model was about 1.5 to 2 times slower. The 3B model stays the default for laptops without a graphics card, and `qwen3:8b` is recommended when the hardware allows it.
+- **Evaluation:** We ran our 10 test emails with both models and the same code. In Run E (one run per email), `qwen3:8b` passed all grading rules for 9 of 10 emails without a false alarm, `qwen2.5:3b` for 6 of 10, but the 8B model was about 1.5 to 2 times slower. Run G repeated this with three runs per email for `qwen2.5:3b`, one run for `qwen3:8b` and an empty case history, and confirmed it: `qwen3:8b` gave the right verdict for all ten emails (9 of 10 passed every grading rule), while `qwen2.5:3b` gave a wrong verdict in 5 of 29 runs. The 3B model stays the default for laptops without a graphics card, and `qwen3:8b` is recommended when the hardware allows it.
 
 Trade-off: a small model can produce invalid actions or miss subtle manipulation more often than a larger one. We limit this with schema validation, a step limit, grounding checks and the offline fallback (see Decisions 10 to 13).
 
@@ -254,16 +254,17 @@ Without thinking mode, the model may miss subtle cases that longer reasoning wou
 **Decision:**
 The AgentAnalyzer runs a loop in the ReAct style. The model decides and the application acts. The flowchart is in section 4 of architecture.md.
 
-1. The application runs the prompt injection scan and the payment fraud scan, which become observations 1 and 2.
+1. The application runs the prompt injection scan, the payment fraud scan and the offline lookalike check, which become observations 1 to 3.
 2. In each step, the model returns either a tool call with its arguments and a one-sentence reason, or the signal to finish.
 3. The application checks the call (Decision 11), runs it and returns the result as a numbered observation.
-4. After finishing, or when the budget is used up, the model writes the final verdict, which is validated (Decision 12).
+4. After finishing, or when the budget is used up, the model writes the final verdict in a new conversation that contains only the email and the results of the checks, not its own reasons from the investigation. The verdict is then validated (Decision 12).
 
 **Rules the application enforces:**
 
 - The budget is six steps. Every decision that is not a finish uses a step, including refused and repeated calls. The loop therefore always ends.
 - The same tool with the same arguments is not run twice. The model is pointed to the earlier observation instead.
 - An invalid answer gets exactly one correction attempt. A second invalid answer ends the run with a ModelError, and the service switches to the fallback.
+- The verdict is requested in a fresh context. During the investigation the model writes a reason for every step, for example "the email contains a suspicious link". In the first version the verdict was requested in the same conversation, so the model read its own guesses again and tended to confirm them. The team evaluation showed a false-positive rate of 0.50 for the agent against 0.00 for the fixed pipeline, which decides with only the email and the check results. The agent now judges the same way, so the investigation chooses the evidence and a separate step weighs it. In the next evaluation run the false-positive rate of the agent dropped from 0.50 to 0.00, but its recall dropped from 1.00 to 0.84. The four missed phishing emails were all rated likely safe with a risk of 39, the highest score of that band, which shows that the small model was unsure. We keep the change, because a false alarm on every second genuine email makes the tool unusable, and we list the lower recall as a known limitation.
 - The arguments of lookup_case_history are always filled in by the application from the email. The model only decides whether to run it.
 - Every analysis creates a fresh run object, so one email can never influence the next one.
 
@@ -449,7 +450,7 @@ All tests run with pytest and need neither Ollama, the network nor the database:
   - `check_email_authentication`: Pass/fail states for SPF, DKIM, and DMARC; Reply-To and Return-Path domain mismatches; display name spoofing against European brands on free webmail.
   - `analyze_links`: Flagging anchor text discrepancies, URL shorteners, and raw IP URLs.
   - `inspect_attachments`: Identifying double extensions (`.pdf.exe`), executable binaries, macros, and archives.
-  - `run_offline_fallback`: Verifying mathematical risk aggregation and valid `Verdict` generation.
+  - Offline fallback: the fallback that the app really uses (`OfflineAnalyzer`, built by the service factory) produces a valid, labelled `Verdict` for a dangerous attachment. The aggregation rules of the fallback are tested in `tests/test_offline_analyzer.py`.
 
 ### Hand-crafted cases
 

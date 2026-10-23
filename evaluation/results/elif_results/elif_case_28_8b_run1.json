@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "model": "qwen3:8b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-23",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-28",
+      "category": "failure_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 0,
+      "fallback": 0,
+      "verdicts": [
+        "suspicious"
+      ],
+      "median_tool_calls": 1,
+      "median_seconds": 135.3,
+      "failed_checks": [
+        "observed:check_email_authentication=warning"
+      ]
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-28",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "suspicious",
+      "risk": 65.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age"
+      ],
+      "model_calls": 3,
+      "duration_ms": 135301,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "observed:check_email_authentication=warning": false,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [
+        "observed:check_email_authentication=warning"
+      ],
+      "passed": false,
+      "wrong_verdict": false,
+      "explanation": "The email is suspicious because the domain hamk-payroll-update.example is very similar to the legitimate hamk.fi domain and was registered just 1 day ago. These are warning signs that the email might be phishing."
+    }
+  ]
+}

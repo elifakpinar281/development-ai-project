@@ -119,12 +119,23 @@ The application code controls which tools exist, validates every tool call, limi
 
 1. **User input:** The user pastes an email or uploads an `.eml` file in the Gradio interface.
 2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input before any model call. The email parser then extracts sender, reply-to, return-path, authentication results, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
-3. **Automatic scans:** Before the model sees the email, two deterministic scans run. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 and 2.
+3. **Automatic scans:** Before the model sees the email, three deterministic scans run. The lookalike check compares the sender and link domains with well-known domains. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 to 3.
 4. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the result as a numbered observation. This repeats until the model finishes or the budget of 6 steps is used up.
 5. **Verdict validation:** The model's final report must match a fixed schema. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
 6. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation, warnings and investigation trace. A fingerprint of the validated verdict is stored in the case history.
 
 If the model fails (Ollama not running, model not installed, timeout or output that stays invalid after one correction), the application switches to an offline analysis. It runs every check that needs neither the model nor the network and shows a rule-based result that is clearly labelled as a fallback.
+
+## User interface
+
+The interface follows our Figma design. It is still a Gradio app (`python -m app.main`), but the page itself is plain HTML, CSS and JavaScript in `app/frontend/`, rendered by one `gr.HTML` component. The page calls the Python functions in `app/ui.py` through Gradio server functions, and these only call the service layer.
+
+- **Analyze:** paste an email, upload or drop an `.eml` file, pick an installed Ollama model and get the verdict, evidence and investigation trace. Follow-up questions about the email (for example "What if I already clicked?") are answered by the model in `src/services/follow_up.py`, with the email passed as untrusted data.
+- **Previous Chats:** every email analysed while the app is running, with filter and search.
+- **Help note:** the "How it works" note can be dragged anywhere on the page, so it never covers a result. A double-click puts it back, and the Help button shows or hides it.
+- **Campaigns:** phishing and suspicious emails of the session that share a sender domain, a link domain or a subject pattern are grouped (`src/services/history.py`).
+
+Previous chats and campaigns are session state. They live only in the running process and are gone after a restart. The persistent case history in PostgreSQL still stores fingerprints only. The fonts (Inter, Inria Serif, DM Serif Display, JetBrains Mono, SIL Open Font License) are bundled in `app/frontend/fonts/`, so the page also works offline. The UI needs Gradio 6.30 or newer: `pip install -U "gradio>=6.30,<7"`.
 
 ## Architecture
 
@@ -142,6 +153,7 @@ Application Service (src/services/ai_service.py)
   | → Investigation Agent (src/capabilities/agent.py): model chooses checks, max 6 steps
   |    → Prompt Injection Scan (src/capabilities/injection_scan.py): always observation 1
   |    → Payment Fraud Scan (src/capabilities/fraud_scan.py): always observation 2
+  |    → Lookalike Domain Scan (offline part of check_lookalike_domain): always observation 3
   |    → Tool Registry (src/capabilities/tool_registry.py): validates every tool call
   |       - email checks, in-process (src/capabilities/tools.py):
   |           check_email_authentication, analyze_links, inspect_attachments
@@ -167,13 +179,13 @@ Application Service (src/services/ai_service.py)
 ## Model
 
 - **Model used:** `qwen2.5:3b`, running locally through Ollama. `qwen3:8b` can be used instead by changing `MODEL_NAME`, without any code change.
-- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 60 seconds. Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes. The larger model judges difficult emails better, as our evaluation shows, so the choice is a trade-off between speed and accuracy.
+- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes (median 161 to 172 seconds in our evaluation runs), which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 1 to 2 minutes (median 72 to 115 seconds, depending on the run). Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes. The larger model judges difficult emails better, as our evaluation shows, so the choice is a trade-off between speed and accuracy.
 - **Selection rationale:**
   - **Privacy:** Emails may contain personal and confidential data. Running the model locally through Ollama keeps the email and its analysis on the user's machine instead of sending them to a third-party LLM API.
-  - **Structured output:** The agent loop depends on reliable JSON decisions and a schema-conformant final report. Qwen3 supports structured output in Ollama, and the schema even limits the model to the real tool names.
+  - **Structured output:** The agent loop depends on reliable JSON decisions and a schema-conformant final report. Ollama supports structured output for both Qwen2.5 and Qwen3: every request carries a JSON schema, and the schema even limits the model to the real tool names.
   - **Small and fast:** The 3B model runs on a normal laptop with 8 GB RAM and answers fast enough for an interactive tool. The facts come from the tools, so the model mainly has to choose checks, read the language of the email and explain the result.
   - **Configurability:** The model is set through environment variables, so `qwen2.5:3b` and `qwen3:8b` can be compared without changing the application.
-- **Evaluation result:** with the same code, `qwen3:8b` passed 9 of our 10 test emails without a false alarm, `qwen2.5:3b` only 6 of 10. The 8B model took about three minutes per email on our laptops instead of one to two. We therefore keep the 3B model as the default for laptops without a graphics card and recommend `qwen3:8b` whenever the hardware allows it (see [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md)).
+- **Evaluation result:** we compared both models with the same code in two runs on the same 10 test emails. In Run E (one run per email), `qwen3:8b` passed all grading rules for 9 of 10 emails without a false alarm, `qwen2.5:3b` only for 6 of 10. In Run G (three runs per email with `qwen2.5:3b`, one with `qwen3:8b`), `qwen3:8b` gave the right verdict for all 10 emails (9 of 10 passed every grading rule), while `qwen2.5:3b` gave a wrong verdict in 5 of 29 runs. The 8B model took about three minutes per email on our laptops instead of one to two. We therefore keep the 3B model as the default for laptops without a graphics card and recommend `qwen3:8b` whenever the hardware allows it (see [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md)).
 - **Settings:** temperature 0 for repeatable results, thinking mode off when a Qwen3 model is used (Qwen2.5 has none), a context window of 8192 tokens and a timeout of 300 seconds per call. All settings can be changed in `.env` (see Decision 9).
 
 ## Additional AI capability
@@ -200,9 +212,9 @@ Which checks are useful therefore cannot be decided in advance:
 - **The relevant checks depend on the email.** Link checks are pointless for an email without links and attachment checks are pointless without attachments.
 - **Each result changes what to check next.** A suspicious finding calls for a deeper check, while a clear finding makes further checks unnecessary.
 
-A fixed workflow would run every check on every email. This is slower, sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
+A fixed workflow would run every check on every email. It sends more data to external services and fills the explanation with irrelevant findings. The agent selects only the relevant checks and stops as soon as the evidence is clear. The application code still decides which tools are allowed, limits the number of steps and applies the final safety rules.
 
-The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)).
+The evaluation tests this claim by comparing the agent with a fixed pipeline and an LLM-only baseline (see [Evaluation](#evaluation)). The result is mixed. The agent used fewer than half of the tool calls (2.9 against 6.6), but it was not faster, because every step of the agent is a model call, and a model call is much slower than a tool call on a laptop without a graphics card. The agent therefore pays off most when tool calls are expensive (external services, rate limits, privacy) and when a faster model is available.
 
 #### Model Context Protocol (MCP)
 The four domain and memory tools depend on external systems (RDAP, a reputation service, a database), so they are exposed through an MCP server. The application starts the server once, discovers the tools via `list_tools()` and calls them through an MCP client. The email-analysis tools have no external dependency and stay direct in-process tools. The application still validates every call, and writing to the case history is not an MCP tool, so the model can only read it. See [Decision 4](docs/project-decisions.md).
@@ -319,22 +331,23 @@ On the 35 labelled hand-crafted emails (25 phishing, 10 legitimate), one run per
 
 | Configuration | Accuracy | Recall | False-positive rate | Median time per email |
 |---|---|---|---|---|
-| Agent (SpotThePhish) | 0.857 | 1.00 | 0.50 | 75 s |
+| Agent, first version (21 Oct) | 0.857 | 1.00 | 0.50 | 75 s |
+| Agent, verdict in a fresh context (22 Oct) | 0.886 | 0.84 | 0.00 | 72 s |
 | Fixed pipeline | 0.943 | 0.92 | 0.00 | 59 s |
 | LLM-only | 0.857 | 0.84 | 0.10 | 26 s |
 
-The checks matter for what the text alone cannot show: LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which the other two configurations found. In this run the agent did not beat the fixed pipeline. It never missed a phishing email, but it rated five genuine emails as phishing. The sample is small and every email ran once, so these differences are not reliable. The details and limitations are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
+The checks matter for what the text alone cannot show: LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which the tool-based configurations found. The first version of the agent never missed a phishing email but rated five of ten genuine emails as phishing. The model had requested the verdict in the same conversation as its own guesses during the investigation. After we moved the verdict into a fresh context with only the email and the check results (Decision 10), the agent raised no false alarm any more, but it missed four phishing emails, which it rated likely safe at the top of that band (risk 39). In both versions the agent did not beat the fixed pipeline. When we repeated ten of the emails three times each, two of them changed their verdict between runs and a third was missed every time, while `qwen3:8b` gave the right verdict for all ten in its single run. The sample is small and every email ran once, so these differences are not reliable. The details and limitations are in [`evaluation/evaluation_results.md`](evaluation/evaluation_results.md).
 
 ### Dataset
 The evaluation uses two data sources, because each one covers a different part of the application:
 
 | Source | Content | Used to evaluate |
 |---|---|---|
-| [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Language-based detection, LLM-only baseline, false positive rate |
-| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for every suspicious sender and link | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
+| [Phishing validation emails dataset](https://doi.org/10.5281/zenodo.13474746) (Miltchev et al., 2024, CC BY 4.0) | 2,000 short labelled email texts (1,000 phishing, 1,000 legitimate), text only (no headers) | Intended for language-based detection, the LLM-only baseline and the false positive rate. The runner supports it (`--zenodo`), but it has not been run yet (see below) |
+| Hand-crafted `.eml` cases in `evaluation/cases` | 38 emails written by the team with full headers, using fictional `.example` domains for suspicious senders and links (only one spoofing case uses a free-mail address) | Authentication, link, domain, attachment and campaign checks, prompt injection, difficult and adversarial cases |
 
 The validation dataset contains only email text, so it cannot test header, link or attachment checks. The hand-crafted cases cover these checks.
-The evaluation uses a stratified sample of the dataset with a fixed seed, so every run sees the same emails.
+The evaluation runner can draw a stratified sample of the dataset with a fixed seed (`--zenodo`), so every run sees the same emails. Because every email takes one to two minutes on a laptop without a graphics card, the reported comparison uses only the hand-crafted emails. The Zenodo sample is listed as an open action item.
 Reputation and domain-age results change over time, so the results of the online checks are stored in an evaluation cache and replayed. For the fictional domains they are seeded on purpose (see Decision 8).
 
 Dataset sources and licenses are documented in [`data/README.md`](data/README.md).
@@ -379,10 +392,10 @@ Each case records the expected behaviour, grading rules, the actual result and a
 - Emails pasted without headers cannot be checked for authentication results, which weakens the assessment.
 - Phishing sent from compromised legitimate accounts passes authentication and domain checks, so detection then depends mainly on the language analysis.
 - A small local model (3B) may produce invalid actions or miss subtle manipulation. The validation, step limits and fallback limit the impact, but they do not eliminate errors.
-- On a computer without a graphics card, the model runs on the processor. In our evaluation with `qwen2.5:3b`, one analysis took between about 40 seconds and 3 minutes, with a median of 77 to 140 seconds depending on the run.
+- On a computer without a graphics card, the model runs on the processor. In our evaluation with `qwen2.5:3b`, one analysis took between about 40 seconds and 3 minutes, with a median of 72 to 140 seconds depending on the run.
 - The judgement of the 3B model varies between runs and is sensitive to the wording of the prompt. In our evaluation it rated a genuine password reset as phishing in three runs in a row (case-23), and its explanations sometimes contain claims that no check supports. The deterministic checks and safety rules give the same result every time, so we moved the gift card and payment fraud detection into such a check.
 - In our evaluation of the domain checks, the 3B model rated harmless emails as phishing in 6 of 12 runs, judging from the wording alone (for example a normal invoice request), and it did not always call the online checks. The case history is only used when the model calls the lookup.
-- The case history matches on the sender domain. One phishing email from a hacked account of a real organisation can therefore make later genuine emails from that organisation look like a known campaign (case-22). Ignoring the sender domain of well-known domains, as is already done for link domains, would prevent this.
+- The case history matches on the sender domain. In our evaluation one phishing email from a hacked hamk.fi account made later genuine hamk.fi emails look like a known campaign (case-22). Sender domains on the brand list and free-mail domains are therefore no longer matched. A hacked account of an organisation that is not on the list can still cause this.
 - The model only sees the first 6,000 characters of the body. The link and attachment checks still use the full email, but wording at the end of a very long email is not analysed by the model.
 - The prompt injection scan uses patterns for typical phrasings. An instruction without such phrases is not detected by the scan. In that case only the step budget, the argument checks and the safety rules protect the analysis.
 - The lookalike check uses a small, hand-maintained list of brand domains. It can miss imitations of other brands and can flag a legitimate domain that merely contains a listed brand name (for example a local shop whose name contains "hamk") or a legitimate subdomain that contains a brand name. Ordinary words that are also brands (`office`, `apple`, `zoom`) only count together with an account word such as `login`. Risk values and thresholds are initial, hand-chosen settings.

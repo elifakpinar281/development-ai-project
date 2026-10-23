@@ -1,0 +1,56 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-21",
+      "category": "failure_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 3,
+      "median_seconds": 94.0,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-21",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_domain_age",
+        "check_email_authentication",
+        "check_lookalike_domain"
+      ],
+      "model_calls": 6,
+      "duration_ms": 94001,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email contains a request to renew a Microsoft 365 licence, which is unusual and suspicious. The domain used in the email (office-license-renewal.example) is similar to a known domain (hamk.fi), which is a similarity signal. The email also lacks any clear indication of urgency or threats, but the request to renew the licence and the link to the sender's own domain are concerning."
+    }
+  ]
+}

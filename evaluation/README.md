@@ -65,7 +65,7 @@ Further options: `--configs` (for example `--configs agent llm_only`), `--only` 
 
 **How verdicts become labels.** The application gives three verdicts, but the datasets have two labels. By default, `phishing` and `suspicious` both count as phishing and `likely safe` counts as legitimate, because the user is warned in both of the first two cases. The option `--suspicious-as legitimate` counts a suspicious verdict as legitimate instead, which is the stricter way to measure. Offline fallback runs are included in the main tables, because the user sees that verdict too. A second table counts only the runs where the model answered.
 
-Without a graphics card, qwen2.5:3b needs about a minute per email and configuration, and qwen3:8b around three minutes. Start with a few cases.
+Without a graphics card, qwen2.5:3b needs about one to two minutes per email and configuration, and qwen3:8b around three minutes. Start with a few cases.
 
 To look at single emails in detail, the script try_agent prints the verdict, the evidence, the warnings and the full trace:
 

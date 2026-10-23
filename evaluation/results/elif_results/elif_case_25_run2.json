@@ -1,0 +1,53 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "e1379e6",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-25",
+      "category": "difficult_case",
+      "critical": true,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 0,
+      "median_seconds": 75.2,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-25",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [],
+      "model_calls": 3,
+      "duration_ms": 75250,
+      "unavailable_tools": [],
+      "warnings": [],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "min_risk": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email asks for gift cards and requests sensitive information, which is a red flag. It also uses urgent language and secrecy to pressure the recipient."
+    }
+  ]
+}

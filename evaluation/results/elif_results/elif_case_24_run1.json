@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "690bd95",
+    "runs": 1,
+    "date": "2026-10-22",
+    "eval_cache_mode": "replay"
+  },
+  "summary": [
+    {
+      "id": "case-24",
+      "category": "difficult_case",
+      "critical": false,
+      "runs": 1,
+      "valid": 1,
+      "passed": 1,
+      "fallback": 0,
+      "verdicts": [
+        "phishing"
+      ],
+      "median_tool_calls": 2,
+      "median_seconds": 140.2,
+      "failed_checks": []
+    }
+  ],
+  "trials": [
+    {
+      "case": "case-24",
+      "trial": 1,
+      "status": "completed",
+      "valid_for_model_eval": true,
+      "verdict": "phishing",
+      "risk": 70.0,
+      "safety_rules": [],
+      "tool_calls": [
+        "check_lookalike_domain",
+        "check_domain_age"
+      ],
+      "model_calls": 4,
+      "duration_ms": 140191,
+      "unavailable_tools": [],
+      "warnings": [
+        "The email has no headers, so the sender could not be verified. For a better result, upload the .eml file or paste the full source."
+      ],
+      "checks": {
+        "verdict_present": true,
+        "verdict_in": true,
+        "warning:has no headers": true,
+        "no_error_leak": true
+      },
+      "fallback_reason": "",
+      "failed_checks": [],
+      "passed": true,
+      "wrong_verdict": false,
+      "explanation": "The email contains a request to confirm a password, which is a common phishing tactic. It also links to a domain that resembles the legitimate HAMK domain (hamk.fi), but is not the exact match. The email does not contain any urgent deadlines or threats, which could have made it more suspicious."
+    }
+  ]
+}
