@@ -158,3 +158,35 @@ def test_text_formatting_for_the_starter_ui():
     assert text.startswith("PHISHING (risk 90/100)")
     rejected = format_result_as_text(service.analyze(""))
     assert "Paste an email" in rejected
+
+
+@pytest.mark.parametrize("text", ["hello", "hi there", "test 1 2"])
+def test_text_that_is_not_an_email_is_rejected_without_calling_the_model(text):
+    def parser(raw):
+        return make_email(body=raw, links=(), has_headers=False)
+
+    service, main, fallback = make_service(parser=parser)
+    outcome = service.analyze(text)
+    assert outcome.status == AnalysisStatus.REJECTED
+    assert "does not look like an email" in outcome.message
+    assert main.emails == [] and fallback.emails == []
+
+
+def test_short_text_with_a_link_is_still_analysed():
+    def parser(raw):
+        return make_email(body=raw, has_headers=False)
+
+    service, main, _ = make_service(parser=parser)
+    outcome = service.analyze("Click https://bit.ly/x now")
+    assert outcome.status == AnalysisStatus.COMPLETED
+    assert len(main.emails) == 1
+
+
+def test_headerless_body_with_enough_words_is_still_analysed():
+    def parser(raw):
+        return make_email(body=raw, links=(), has_headers=False)
+
+    service, main, _ = make_service(parser=parser)
+    outcome = service.analyze("Please buy four gift cards for me today and send the codes.")
+    assert outcome.status == AnalysisStatus.COMPLETED
+    assert len(main.emails) == 1

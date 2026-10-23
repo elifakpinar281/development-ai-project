@@ -38,3 +38,24 @@ def test_empty_input_is_rejected_by_the_service(monkeypatch):
     monkeypatch.setattr(ui, "get_service_for_model", lambda name: service)
     view = ui.analyze({"text": "   "})
     assert view["rejected"] is True
+
+def test_follow_up_explains_that_the_model_is_down_without_mentioning_offline_checks(monkeypatch):
+    from src.exceptions import ModelUnavailableError
+
+    class DownModel:
+        def chat(self, messages, response_schema=None):
+            raise ModelUnavailableError("Could not connect to Ollama.")
+
+    monkeypatch.setattr(config, "case_history_write", False)
+    model = ScriptedModelClient([
+        decide(None),
+        final(evidence=[{"source": "tool", "observation_id": 1, "quote": None, "claim": "Scan ran."}]),
+    ])
+    service = build_analysis_service(model_client=model, start_domain_server=False)
+    monkeypatch.setattr(ui, "get_service_for_model", lambda name: service)
+    ui.analyze({"text": EMAIL})
+    entry = ui.session_history().entries()[-1]
+
+    answer = follow_up.answer_question(DownModel(), entry, "What if I already clicked?")
+    assert "not available" in answer
+    assert "offline checks" not in answer

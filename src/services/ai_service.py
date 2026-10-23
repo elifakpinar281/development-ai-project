@@ -14,6 +14,12 @@ logger = logging.getLogger(__name__)
 EmailParser = Callable[[str], ParsedEmail]
 CaseRecorder = Callable[[ParsedEmail, Verdict], object]
 
+MIN_WORDS_WITHOUT_HEADERS = 5
+TOO_SHORT_MESSAGE = (
+    "This does not look like an email. Paste the full email (ideally with headers) "
+    "or upload an .eml file."
+)
+
 
 class AnalysisService:
     def __init__(
@@ -67,6 +73,10 @@ class AnalysisService:
             logger.info("Input rejected by the parser: %s", error.reason)
             return AnalysisResult.rejected(error.user_message, duration_ms=self._ms_since(started))
 
+        if self._too_short_to_analyse(email):
+            logger.info("Input rejected: no headers, no links and fewer than %d words", MIN_WORDS_WITHOUT_HEADERS)
+            return AnalysisResult.rejected(TOO_SHORT_MESSAGE, duration_ms=self._ms_since(started))
+
         warnings = list(self.startup_warnings)
         try:
             output = self.main_analyzer.analyze(email)
@@ -107,6 +117,13 @@ class AnalysisService:
             model_calls=output.model_calls,
             duration_ms=self._ms_since(started),
         )
+
+    def _too_short_to_analyse(self, email: ParsedEmail) -> bool:
+        """True for input like 'hello': no headers, no links and only a few words."""
+        if email.has_headers or email.links:
+            return False
+        word_count = len(email.body_plain.split())
+        return word_count < MIN_WORDS_WITHOUT_HEADERS
 
     def _ms_since(self, started: float) -> int:
         return int((self.clock() - started) * 1000)

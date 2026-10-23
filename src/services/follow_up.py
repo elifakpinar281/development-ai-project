@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 import secrets
 
+from src.exceptions import ModelNotFoundError, ModelTimeoutError
 from src.schemas.agent import ChatMessage
 from src.services.history import HistoryEntry
 
@@ -51,10 +52,17 @@ def answer_question(client, entry: HistoryEntry, question: str) -> str:
 
     try:
         reply = (client.chat(messages) or "").strip()
+    except ModelNotFoundError as error:
+        logger.warning("Follow-up question failed: %s", error)
+        return (f"The AI model '{entry.model_name}' is not installed in Ollama, so I cannot answer this question. "
+                f"Run 'ollama pull {entry.model_name}' and ask again. The verdict above is still valid.")
+    except ModelTimeoutError as error:
+        logger.warning("Follow-up question failed: %s", error)
+        return "The AI model took too long to answer. Please ask again. The verdict above is still valid."
     except Exception as error:
         logger.warning("Follow-up question failed: %s", error)
-        message = getattr(error, "user_message", "")
-        return message or "The AI model is not available right now (is Ollama running?). Please try again."
+        return ("The AI model is not available right now (is Ollama running?), so I cannot answer this question. "
+                "The verdict above is still valid. Please try again later.")
     if not reply:
         return "The model did not return an answer. Please try again."
     return reply
