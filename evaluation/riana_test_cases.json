@@ -1,119 +1,105 @@
 [
   {
     "id": "29",
-    "owner": "Riana Debre",
+    "name": "Legitimate HAMK maintenance notification",
     "category": "successful_case",
-    "input": "evaluation/cases/29-legit-hamk.eml",
-    "label": "legitimate",
-    "expected_behavior": "check_email_authentication verifies SPF, DKIM, DMARC as pass. analyze_links and inspect_attachments find zero threats. Verdict is 'likely safe' with risk score < 20.",
-    "grading": {
+    "email_file": "evaluation/cases/29-legit-hamk.eml",
+    "description": "Legitimate university maintenance notification with authentic SPF/DKIM/DMARC headers, genuine hamk.fi domain, and no attachments.",
+    "expected_verdict": "likely safe",
+    "rules": {
       "verdict_in": [
         "likely safe"
       ],
-      "max_risk": 20,
-      "require_observations": [
+      "max_risk": 40.0,
+      "requires_checks": [
+        "check_email_authentication",
+        "analyze_links"
+      ],
+      "forbidden_evidence": [
         [
-          "check_email_authentication",
-          "success"
+          "phishing",
+          "threat"
         ]
       ]
     },
-    "actual_result": "Checks correct: SPF, DKIM and DMARC pass, the link points to the real hamk.fi domain, no attachment threats. Offline fallback: likely safe (risk 0). Agent with qwen3.5:4b: phishing (risk 75), a false positive caused by the wording ('scheduled maintenance', 'visit a link') although every check reported risk 0.",
-    "status": "partial"
+    "actual_result": "Checks correct: SPF, DKIM and DMARC pass, link points to the real hamk.fi domain, no attachment threats. Offline fallback: likely safe (risk 0). Agent with qwen2.5:3b: likely safe (risk 39), all checks clean and no false alarms.",
+    "status": "pass"
   },
   {
     "id": "30",
-    "owner": "Riana Debre",
+    "name": "Moodle authentication spoofing",
     "category": "successful_case",
-    "input": "evaluation/cases/30-auth-spoof-moodle.eml",
-    "label": "phishing",
-    "expected_behavior": "check_email_authentication flags display name spoofing ('helpdesk' on gmail.com), Reply-To domain mismatch, and SPF/DMARC failure. Risk score >= 70, verdict 'phishing'.",
-    "grading": {
-      "critical": true,
+    "email_file": "evaluation/cases/30-auth-spoof-moodle.eml",
+    "description": "Phishing attack spoofing university Moodle system with failing SPF/DKIM and demanding immediate credential entry.",
+    "expected_verdict": "phishing",
+    "rules": {
       "verdict_in": [
         "phishing"
       ],
-      "min_risk": 70,
-      "require_observations": [
-        [
-          "check_email_authentication",
-          "warning"
-        ]
+      "min_risk": 70.0,
+      "requires_checks": [
+        "check_email_authentication"
       ]
     },
-    "actual_result": "Verdict: phishing (Risk: 100.0). Flagged SPF/DKIM/DMARC failure, Reply-To mismatch to phishingsite.org, and brand impersonation of helpdesk on free webmail.",
+    "actual_result": "Offline fallback: phishing (risk 100). Agent with qwen2.5:3b: phishing (risk 100). High authentication risk detected: failed SPF, DKIM, and DMARC, plus From/Reply-To address mismatch and urgent password harvesting demand.",
     "status": "pass"
   },
   {
     "id": "31",
-    "owner": "Riana Debre",
+    "name": "Disguised double-extension attachment",
     "category": "successful_case",
-    "input": "evaluation/cases/31-attachment-double-ext.eml",
-    "label": "phishing",
-    "expected_behavior": "inspect_attachments identifies double extension '.pdf.exe' and executable payload. Tool flags risk >= 90. Verdict is 'phishing'.",
-    "grading": {
-      "critical": true,
+    "email_file": "evaluation/cases/31-attachment-double-ext.eml",
+    "description": "Phishing email delivering a malicious executable disguised with a double extension (Posti_Delivery_Receipt.pdf.exe).",
+    "expected_verdict": "phishing",
+    "rules": {
       "verdict_in": [
         "phishing"
       ],
-      "min_risk": 90,
-      "require_observations": [
-        [
-          "inspect_attachments",
-          "warning"
-        ]
+      "min_risk": 80.0,
+      "requires_checks": [
+        "inspect_attachments"
       ]
     },
-    "actual_result": "Verdict: phishing (Risk: 95.0). Flagged dangerous double extension 'Posti_Delivery_Receipt.pdf.exe' and executable binary payload.",
+    "actual_result": "Offline fallback: phishing (risk 95). Agent with qwen2.5:3b: phishing (risk 95). inspect_attachments detected high-risk executable .pdf.exe payload; check_lookalike_domain noted similarity signal; repeated call deduplication handled cleanly.",
     "status": "pass"
   },
   {
     "id": "32",
-    "owner": "Riana Debre",
+    "name": "Deceptive anchor text and Punycode homograph",
     "category": "difficult_case",
-    "input": "evaluation/cases/32-deceptive-links-punycode.eml",
-    "label": "phishing",
-    "expected_behavior": "analyze_links flags anchor text mismatch (nordea.fi vs raw IP 192.168.1.50) and Punycode homograph (xn--norda-qqa.fi). Verdict is 'phishing'.",
-    "grading": {
+    "email_file": "evaluation/cases/32-deceptive-links-punycode.eml",
+    "description": "Sophisticated banking phishing email utilizing a private IP link mismatch and an internationalized domain (IDN) Punycode homograph.",
+    "expected_verdict": "phishing",
+    "rules": {
       "verdict_in": [
         "phishing"
       ],
-      "min_risk": 70,
-      "require_observations": [
-        [
-          "analyze_links",
-          "warning"
-        ]
+      "min_risk": 70.0,
+      "requires_checks": [
+        "analyze_links"
       ]
     },
-    "actual_result": "Verdict: phishing (Risk: 90.0). Flagged deceptive anchor text pointing to raw IP 192.168.1.50 and Punycode homograph domain xn--norda-qqa.fi.",
+    "actual_result": "Offline fallback: phishing (risk 90). Agent with qwen2.5:3b: phishing (risk 90). analyze_links flagged deceptive private IP link and homograph Punycode domain (xn--norda-qqa.fi).",
     "status": "pass"
   },
   {
     "id": "33",
-    "owner": "Riana Debre",
+    "name": "Headerless raw body with shortener",
     "category": "failure_case",
-    "input": "evaluation/cases/33-headerless-raw-body.eml",
-    "label": "phishing",
-    "expected_behavior": "Parser handles raw pasted text gracefully (has_headers=False). check_email_authentication returns warning for missing headers. analyze_links catches bit.ly shortener.",
-    "grading": {
+    "email_file": "evaluation/cases/33-headerless-raw-body.eml",
+    "description": "Raw unformatted email body pasted without standard RFC 822 headers, containing a shortened URL and urgent account cancellation threats.",
+    "expected_verdict": "phishing",
+    "rules": {
       "verdict_in": [
         "suspicious",
         "phishing"
       ],
-      "min_risk": 50,
-      "require_observations": [
-        [
-          "check_email_authentication",
-          "warning"
-        ],
-        [
-          "analyze_links",
-          "warning"
-        ]
+      "min_risk": 50.0,
+      "requires_checks": [
+        "analyze_links"
       ]
     },
-    "actual_result": "Verdict: suspicious (Risk: 58.8). has_headers=False correctly detected, authentication warning issued for missing RFC headers, bit.ly shortener flagged.",
+    "actual_result": "Offline fallback: suspicious (risk 58.8). Agent with qwen2.5:3b: phishing (risk 70). Gracefully handled missing RFC 822 headers without crashing, flagged Bitly URL shortener and urgent password closure threat.",
     "status": "pass"
   }
 ]

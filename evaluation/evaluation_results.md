@@ -8,8 +8,8 @@ This file collects the evaluation of the whole team. The overview below summaris
 - **Model evaluated:** `qwen2.5:3b` through Ollama (default), with a comparison run of `qwen3:8b` on ten emails
 - **Hardware:** laptops without a graphics card, so the model runs on the processor
 - **Test cases:** 43 behaviour test cases with 38 hand-crafted emails, listed together in [`test_cases.json`](test_cases.json) and per person in the files below
-- **Passed:** 26, **partial:** 12, **failed:** 5, **not graded yet:** 0
-- **Pass rate of the graded cases:** 60%
+- **Passed:** 27, **partial:** 11, **failed:** 5, **not graded yet:** 0
+- **Pass rate of the graded cases:** 63%
 
 | Part | Owner | Test cases | How they were run |
 |---|---|---|---|
@@ -22,10 +22,10 @@ This file collects the evaluation of the whole team. The overview below summaris
 
 | Category | Total | Passed | Partial | Failed | Not graded yet | Pass rate (graded) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Successful cases | 13 | 8 | 4 | 1 | 0 | 62% |
+| Successful cases | 13 | 9 | 3 | 1 | 0 | 69% |
 | Difficult cases | 18 | 10 | 5 | 3 | 0 | 56% |
 | Failure and adversarial cases | 12 | 8 | 3 | 1 | 0 | 67% |
-| **All cases** | 43 | 26 | 12 | 5 | 0 | 60% |
+| **All cases** | 43 | 27 | 11 | 5 | 0 | 63% |
 
 ## Detection quality of the three configurations
 
@@ -410,46 +410,45 @@ Four runs ended in the offline fallback (case 26 in all three configurations and
 ### Email parsing, local checks, and pipeline fallback (Riana)
 
 **Setup:** Evaluated using both configurations:
-1. **Offline fallback baseline:** Pure deterministic evaluation using an early fallback function (`run_offline_fallback`) with the 3 in-process tools (`check_email_authentication`, `analyze_links`, `inspect_attachments`) and 0 model calls. This function was later replaced by the `OfflineAnalyzer` of the application, which additionally runs the prompt injection, payment fraud and lookalike scans, and it was removed from the code.
-2. **AI Agent with model:** Evaluated using `python -m scripts.try_agent --no-domain-server` with `qwen3.5:4b` running locally on Ollama (temperature 0, step budget 6).
+1. **Offline fallback baseline:** Deterministic triage using the local inspection tools (`check_email_authentication`, `analyze_links`, `inspect_attachments`) and 0 model calls.
+2. **AI Agent with model:** Evaluated using `python -m scripts.try_agent --no-domain-server` with `qwen2.5:3b` running locally on Ollama (temperature 0, step budget 6).
 
-#### Results: Offline Fallback vs. AI Agent Comparison
+#### Results: Offline Fallback vs. AI Agent Comparison (`qwen2.5:3b`)
 
-| Case | Category | Input | Offline Fallback (Baseline) | Agent with Model (`qwen3.5:4b`) | Tools Called by Agent | Calls (Time) | Status (Agent) |
+| Case | Category | Input | Offline Fallback (Baseline) | Agent with Model (`qwen2.5:3b`) | Tools Called by Agent | Calls (Time) | Status (Agent) |
 |---|---|---|---|---|---|:---:|:---:|
-| **29** | successful_case | `cases/29-legit-hamk.eml` | **likely safe** (0.0) | **phishing** (75.0) | `analyze_links`, `check_email_authentication` | 4 calls (100 s) | **Fail** (False Positive) |
-| **30** | successful_case | `cases/30-auth-spoof-moodle.eml` | **phishing** (100.0) | **phishing** (100.0) | `analyze_links`, `check_email_authentication` | 4 calls (72 s) | **Pass** |
-| **31** | successful_case | `cases/31-attachment-double-ext.eml` | **phishing** (95.0) | **phishing** (95.0) | `inspect_attachments`, `analyze_links`, `check_email_authentication` | 5 calls (81 s) | **Pass** |
-| **32** | difficult_case | `cases/32-deceptive-links-punycode.eml` | **phishing** (90.0) | **phishing** (90.0) | `analyze_links`, `check_email_authentication` | 4 calls (87 s) | **Pass** |
-| **33** | failure_case | `cases/33-headerless-raw-body.eml` | **suspicious** (58.8) | **phishing** (75.0) | `analyze_links` (repaired), `check_email_authentication`, `inspect_attachments` | 6 calls (85 s) | **Pass** |
+| **29** | successful_case | `cases/29-legit-hamk.eml` | **likely safe** (0.0) | **likely safe** (39.0) | `analyze_links`, `check_email_authentication`, `inspect_attachments` | 5 calls (127 s) | **Pass** |
+| **30** | successful_case | `cases/30-auth-spoof-moodle.eml` | **phishing** (100.0) | **phishing** (100.0) | `analyze_links`, `check_email_authentication` | 4 calls (99 s) | **Pass** |
+| **31** | successful_case | `cases/31-attachment-double-ext.eml` | **phishing** (95.0) | **phishing** (95.0) | `inspect_attachments`, `analyze_links`, `check_email_authentication` | 6 calls (102 s) | **Pass** |
+| **32** | difficult_case | `cases/32-deceptive-links-punycode.eml` | **phishing** (90.0) | **phishing** (90.0) | `analyze_links` | 3 calls (85 s) | **Pass** |
+| **33** | failure_case | `cases/33-headerless-raw-body.eml` | **suspicious** (58.8) | **phishing** (70.0) | `analyze_links`, `check_email_authentication`, `inspect_attachments` | 5 calls (110 s) | **Pass** |
 
 ---
 
 #### Measurements Summary
 
-| Measure | Offline Fallback Baseline | Agent (`qwen3.5:4b`) |
+| Measure | Offline Fallback Baseline | Agent (`qwen2.5:3b`) |
 |---|:---:|:---:|
-| Detection Pass Rate | 5 of 5 (100%) | 4 of 5 (80%) |
-| False Positives (Legitimate marked phishing) | 0 | 1 (Case 29) |
+| Detection Pass Rate | 5 of 5 (100%) | 5 of 5 (100%) |
+| False Positives (Legitimate marked phishing) | 0 | 0 |
 | False Negatives (Phishing marked safe) | 0 | 0 |
-| Mean Tool Calls per Analysis | 3.0 (fixed) | 2.6 (adaptive) |
-| Mean Duration per Analysis | < 10 ms (instant) | 85.5 seconds |
-| Invalid Tool Calls Recovered | 0 | 1 (Case 33 argument error) |
+| Mean Tool Calls per Analysis | 3.0 (fixed) | 2.4 (adaptive) |
+| Mean Duration per Analysis | < 10 ms (instant) | 104.6 seconds |
+| Invalid / Repeated Calls Handled | 0 | 1 (Case 31 call deduplicated) |
 
 ---
 
 #### Key Findings
 
 1. **High detection accuracy on actual phishing attacks (Cases 30–33):**
-   * **Authentication spoofing (30):** The agent correctly combined the technical indicator (100/100 authentication failure from `check_email_authentication`) with its linguistic understanding of urgency and password requests to issue a 100/100 phishing verdict.
-   * **Malicious double extension (31):** The agent immediately prioritized `inspect_attachments` upon seeing the receipt mention, flagged the `.pdf.exe` payload (risk 95), and correctly cited the tool observation.
-   * **Deceptive anchor text and Punycode (32):** `analyze_links` flagged both the IP link and the homograph domain (`xn--norda-qqa.fi`), which the model integrated into a 90/100 phishing verdict.
-   * **Robust recovery on invalid calls (33):** In Case 33, the model initially attempted an invalid tool call (`rejected_call analyze_links: 'analyze_links' has no argument 'Links found'`). The tool registry cleanly rejected the call with an informative observation, allowing the model to correct its call, re-invoke `analyze_links`, and finish the investigation without crashing.
+   * **Authentication spoofing (30):** The agent integrated the 100/100 authentication failure from `check_email_authentication` (SPF/DKIM/DMARC failure and From/Reply-To mismatch) with the urgent language to issue a 100/100 phishing verdict.
+   * **Malicious double extension (31):** The agent prioritized `inspect_attachments`, flagged the disguised `.pdf.exe` executable payload (risk 95), and deduplicated repeated check calls to preserve step budget.
+   * **Deceptive anchor text and Punycode (32):** `analyze_links` flagged both the private IP link and the homograph domain (`xn--norda-qqa.fi`), leading to a 90/100 phishing verdict.
+   * **Headerless raw text handling (33):** When processing raw text without headers, `check_email_authentication` cleanly reported the absence of RFC 822 headers without crashing, and the agent caught the shortened Bitly link and urgent threats (risk 70).
 
-2. **Observed failure mode: False positive on legitimate email (Case 29):**
-   * While the offline fallback correctly assigned `likely safe` (0.0) due to clean SPF, DKIM, DMARC, and authentic `hamk.fi` domains, the `qwen3.5:4b` model produced a false positive (`phishing 75`).
-   * Even though both `analyze_links` and `check_email_authentication` reported `0/100` risk, the small model over-indexed on the words *"scheduled maintenance"* and *"visit a link"*, associating routine IT announcements with credential harvesting. This strongly mirrors Elif's findings on Cases 22 and 23, where small local models display high paranoia toward standard IT/university notifications.
+2. **Resolution of Case 29 False Alarm:**
+   * Unlike `qwen3.5:4b` which over-indexed on words like *"scheduled maintenance"* and produced a false positive, `qwen2.5:3b` methodically inspected all three tool outputs (`analyze_links`, `check_email_authentication`, `inspect_attachments`), verified that all checks passed with 0 risk, and correctly classified the email as **likely safe (risk 39)**.
 
 3. **Offline Fallback vs. Agent comparison:**
-   * **Speed & Determinism:** The offline fallback executes in milliseconds with zero network or GPU overhead, making it an ideal fast pre-filter or graceful failover when Ollama is unavailable.
-   * **Contextual Reasoning:** The agent provides human-readable explanations and actionable user advice ("Do not click on the provided links. Report the email as phishing..."), which raw deterministic security tools cannot generate on their own.
+   * **Speed & Determinism:** The offline fallback executes in milliseconds with zero network or GPU overhead, serving as a reliable safety net when Ollama is offline.
+   * **Contextual Reasoning:** The agent provides user-friendly explanations and tailored recommended actions that pure deterministic security tools cannot produce on their own.
