@@ -8,8 +8,8 @@ This file collects the evaluation of the whole team. The overview below summaris
 - **Model evaluated:** `qwen2.5:3b` through Ollama (default), with a comparison run of `qwen3:8b` on ten emails
 - **Hardware:** laptops without a graphics card, so the model runs on the processor
 - **Test cases:** 43 behaviour test cases with 38 hand-crafted emails, listed together in [`test_cases.json`](test_cases.json) and per person in the files below
-- **Passed:** 27, **partial:** 11, **failed:** 5, **not graded yet:** 0
-- **Pass rate of the graded cases:** 63%
+- **Passed:** 26, **partial:** 12, **failed:** 5, **not graded yet:** 0
+- **Pass rate of the graded cases:** 60%
 
 | Part | Owner | Test cases | How they were run |
 |---|---|---|---|
@@ -22,10 +22,10 @@ This file collects the evaluation of the whole team. The overview below summaris
 
 | Category | Total | Passed | Partial | Failed | Not graded yet | Pass rate (graded) |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
-| Successful cases | 13 | 9 | 3 | 1 | 0 | 69% |
+| Successful cases | 13 | 8 | 4 | 1 | 0 | 62% |
 | Difficult cases | 18 | 10 | 5 | 3 | 0 | 56% |
 | Failure and adversarial cases | 12 | 8 | 3 | 1 | 0 | 67% |
-| **All cases** | 43 | 27 | 11 | 5 | 0 | 63% |
+| **All cases** | 43 | 26 | 12 | 5 | 0 | 60% |
 
 ## Detection quality of the three configurations
 
@@ -43,7 +43,7 @@ This file collects the evaluation of the whole team. The overview below summaris
 ### What worked well
 - **The safeguards of the application held in every run.** No prompt injection led to a likely safe verdict, invented evidence was always rejected by the validator, and tool calls with domains outside the email were refused.
 - **Tools add what the text alone cannot show.** LLM-only missed a dangerous attachment and a phishing link at the end of a long email, which both tool-based configurations found.
-- **No phishing email was missed by the agent** in the comparison run (recall 1.00), which is our primary metric.
+- **The first agent version missed no phishing email** (recall 1.00, our primary metric), but it rated 5 of 10 genuine emails as phishing. After the fix in Decision 10 the agent raised no false alarm, and its recall dropped to 0.84 (see Observed failure modes).
 - **Failures are handled in a controlled way.** Ollama not running, a missing model, unavailable online services and empty input all led to a labelled result or a clear message instead of a crash.
 - **Deterministic checks give stable results.** The prompt injection scan, the payment fraud scan, the lookalike check and the safety rules give the same answer in every run.
 
@@ -60,7 +60,7 @@ This file collects the evaluation of the whole team. The overview below summaris
 - [ ] Rerun the full 35-email comparison with the current code.
 - [ ] Repeat the comparison with three runs per email, `--cache replay` and the Zenodo sample.
 - [ ] Repeat the comparison with `qwen3:8b` on hardware with a graphics card.
-- [ ] Do not match the case history on the sender domain of well-known domains.
+- [x] Do not match the case history on the sender domain of well-known domains (sender domains on the brand list, for example hamk.fi, and free-mail domains are ignored).
 - [ ] Refuse input that is clearly not an email.
 
 ## Detailed results per team member
@@ -338,7 +338,7 @@ The important result is the last column: the scan caused no false alarm on 1,000
 - [x] Remove repeated evidence items.
 - [x] Name the missing model in the warning.
 - [x] Replace the fraud rule in the prompt with the deterministic scan_payment_fraud check and the payment_fraud safety rule.
-- [ ] Do not match the case history on the sender domain of well-known domains, as is already done for link domains (memory part, Martina).
+- [x] Do not match the case history on the sender domain of well-known domains, as is already done for link domains (memory part, Martina). Done: sender domains on the brand list and free-mail domains are ignored.
 - [ ] Clear the case history and set `CASE_HISTORY_WRITE=false` before every evaluation run, and run each case at least three times.
 - [x] Repeat the cases with `qwen3:8b` (Run E).
 - [ ] Consider a safety rule for a lookalike domain without any registration record, which would have prevented the false negative in case 27.

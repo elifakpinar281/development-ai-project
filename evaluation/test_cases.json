@@ -336,8 +336,8 @@
     "category": "successful_case",
     "input": "evaluation/cases/29-legit-hamk.eml",
     "expected_behavior": "check_email_authentication verifies SPF, DKIM, DMARC as pass. analyze_links and inspect_attachments find zero threats. Verdict is 'likely safe' with risk score < 20.",
-    "actual_result": "Verdict: likely safe (Risk: 0.0). Authentication passed with no sender forgery, 1 genuine domain link verified, 0 attachment threats.",
-    "status": "pass"
+    "actual_result": "Checks correct: SPF, DKIM and DMARC pass, the link points to the real hamk.fi domain, no attachment threats. Offline fallback: likely safe (risk 0). Agent with qwen3.5:4b: phishing (risk 75), a false positive caused by the wording ('scheduled maintenance', 'visit a link') although every check reported risk 0.",
+    "status": "partial"
   },
   {
     "id": "30",
