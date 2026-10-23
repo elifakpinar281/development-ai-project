@@ -1,0 +1,182 @@
+{
+  "meta": {
+    "model": "qwen2.5:3b",
+    "commit": "f40cb59",
+    "date": "2026-10-23",
+    "cache": "replay",
+    "suspicious_as": "phishing",
+    "emails": 35,
+    "seed": 42,
+    "configs": [
+      "agent",
+      "fixed_pipeline"
+    ],
+    "total_minutes": 94.3
+  },
+  "all": {
+    "agent": {
+      "all_runs": {
+        "runs": 35,
+        "answered": 35,
+        "tp": 24,
+        "fp": 2,
+        "tn": 8,
+        "fn": 1,
+        "accuracy": 0.914,
+        "precision": 0.923,
+        "recall": 0.96,
+        "f1": 0.941,
+        "false_positive_rate": 0.2,
+        "fallback_runs": 0,
+        "no_answer_runs": 0,
+        "median_latency_s": 91.6,
+        "mean_model_calls": 4.5,
+        "mean_tool_calls": 2.2,
+        "runs_with_invalid_output": 1
+      },
+      "model_runs_only": {
+        "runs": 35,
+        "answered": 35,
+        "tp": 24,
+        "fp": 2,
+        "tn": 8,
+        "fn": 1,
+        "accuracy": 0.914,
+        "precision": 0.923,
+        "recall": 0.96,
+        "f1": 0.941,
+        "false_positive_rate": 0.2,
+        "fallback_runs": 0,
+        "no_answer_runs": 0,
+        "median_latency_s": 91.6,
+        "mean_model_calls": 4.5,
+        "mean_tool_calls": 2.2,
+        "runs_with_invalid_output": 1
+      }
+    },
+    "fixed_pipeline": {
+      "all_runs": {
+        "runs": 35,
+        "answered": 35,
+        "tp": 25,
+        "fp": 0,
+        "tn": 10,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "fallback_runs": 0,
+        "no_answer_runs": 0,
+        "median_latency_s": 64.2,
+        "mean_model_calls": 1.1,
+        "mean_tool_calls": 7.0,
+        "runs_with_invalid_output": 2
+      },
+      "model_runs_only": {
+        "runs": 35,
+        "answered": 35,
+        "tp": 25,
+        "fp": 0,
+        "tn": 10,
+        "fn": 0,
+        "accuracy": 1.0,
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "false_positive_rate": 0.0,
+        "fallback_runs": 0,
+        "no_answer_runs": 0,
+        "median_latency_s": 64.2,
+        "mean_model_calls": 1.1,
+        "mean_tool_calls": 7.0,
+        "runs_with_invalid_output": 2
+      }
+    }
+  },
+  "by_source": {
+    "hand-crafted": {
+      "agent": {
+        "all_runs": {
+          "runs": 35,
+          "answered": 35,
+          "tp": 24,
+          "fp": 2,
+          "tn": 8,
+          "fn": 1,
+          "accuracy": 0.914,
+          "precision": 0.923,
+          "recall": 0.96,
+          "f1": 0.941,
+          "false_positive_rate": 0.2,
+          "fallback_runs": 0,
+          "no_answer_runs": 0,
+          "median_latency_s": 91.6,
+          "mean_model_calls": 4.5,
+          "mean_tool_calls": 2.2,
+          "runs_with_invalid_output": 1
+        },
+        "model_runs_only": {
+          "runs": 35,
+          "answered": 35,
+          "tp": 24,
+          "fp": 2,
+          "tn": 8,
+          "fn": 1,
+          "accuracy": 0.914,
+          "precision": 0.923,
+          "recall": 0.96,
+          "f1": 0.941,
+          "false_positive_rate": 0.2,
+          "fallback_runs": 0,
+          "no_answer_runs": 0,
+          "median_latency_s": 91.6,
+          "mean_model_calls": 4.5,
+          "mean_tool_calls": 2.2,
+          "runs_with_invalid_output": 1
+        }
+      },
+      "fixed_pipeline": {
+        "all_runs": {
+          "runs": 35,
+          "answered": 35,
+          "tp": 25,
+          "fp": 0,
+          "tn": 10,
+          "fn": 0,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "fallback_runs": 0,
+          "no_answer_runs": 0,
+          "median_latency_s": 64.2,
+          "mean_model_calls": 1.1,
+          "mean_tool_calls": 7.0,
+          "runs_with_invalid_output": 2
+        },
+        "model_runs_only": {
+          "runs": 35,
+          "answered": 35,
+          "tp": 25,
+          "fp": 0,
+          "tn": 10,
+          "fn": 0,
+          "accuracy": 1.0,
+          "precision": 1.0,
+          "recall": 1.0,
+          "f1": 1.0,
+          "false_positive_rate": 0.0,
+          "fallback_runs": 0,
+          "no_answer_runs": 0,
+          "median_latency_s": 64.2,
+          "mean_model_calls": 1.1,
+          "mean_tool_calls": 7.0,
+          "runs_with_invalid_output": 2
+        }
+      }
+    }
+  }
+}
