@@ -23,6 +23,7 @@
     filter: 'all',
     search: '',
     noteOpen: readNoteSetting(),
+    notePos: readNotePosition(),
     asking: {},
     collapsed: { emails: false, campaigns: false },
   };
@@ -62,6 +63,19 @@
   }
   function saveNoteSetting(open) {
     try { localStorage.setItem('stp-note', open ? 'open' : 'closed'); } catch (error) { /* ignore */ }
+  }
+  function readNotePosition() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('stp-note-pos') || 'null');
+      if (saved && typeof saved.x === 'number' && typeof saved.y === 'number') return saved;
+    } catch (error) { /* ignore */ }
+    return null;
+  }
+  function saveNotePosition(position) {
+    try {
+      if (position) localStorage.setItem('stp-note-pos', JSON.stringify(position));
+      else localStorage.removeItem('stp-note-pos');
+    } catch (error) { /* ignore */ }
   }
   function esc(value) {
     return String(value == null ? '' : value)
@@ -140,6 +154,31 @@
     if (helpNote.parentElement !== home) home.appendChild(helpNote);
     helpNote.classList.toggle('open', chatPage && state.noteOpen);
     root.querySelector('[data-help]').setAttribute('aria-pressed', state.noteOpen ? 'true' : 'false');
+    applyNotePosition();
+  }
+
+  function keepNoteOnScreen(position) {
+    const width = helpNote.offsetWidth || 344;
+    const height = helpNote.offsetHeight || 273;
+    const maxX = Math.max(0, window.innerWidth - width);
+    const maxY = Math.max(0, window.innerHeight - height);
+    return {
+      x: Math.min(Math.max(0, position.x), maxX),
+      y: Math.min(Math.max(0, position.y), maxY),
+    };
+  }
+
+  function applyNotePosition() {
+    if (!state.notePos) {
+      helpNote.classList.remove('dragged');
+      helpNote.style.left = '';
+      helpNote.style.top = '';
+      return;
+    }
+    const position = keepNoteOnScreen(state.notePos);
+    helpNote.classList.add('dragged');
+    helpNote.style.left = position.x + 'px';
+    helpNote.style.top = position.y + 'px';
   }
 
   function setNote(open) {
@@ -557,6 +596,40 @@
   });
 
   helpNote.innerHTML = noteHtml();
+  helpNote.title = 'Drag to move. Double-click to put it back.';
+
+  let noteDrag = null;
+  helpNote.addEventListener('pointerdown', function (event) {
+    if (event.button !== 0 || event.target.closest('[data-note-close]')) return;
+    const rect = helpNote.getBoundingClientRect();
+    noteDrag = { offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, moved: false };
+    helpNote.setPointerCapture(event.pointerId);
+    event.preventDefault();
+  });
+  helpNote.addEventListener('pointermove', function (event) {
+    if (!noteDrag) return;
+    noteDrag.moved = true;
+    helpNote.classList.add('dragging');
+    state.notePos = keepNoteOnScreen({ x: event.clientX - noteDrag.offsetX, y: event.clientY - noteDrag.offsetY });
+    applyNotePosition();
+  });
+  function endNoteDrag() {
+    if (!noteDrag) return;
+    if (noteDrag.moved) saveNotePosition(state.notePos);
+    noteDrag = null;
+    helpNote.classList.remove('dragging');
+  }
+  helpNote.addEventListener('pointerup', endNoteDrag);
+  helpNote.addEventListener('pointercancel', endNoteDrag);
+  helpNote.addEventListener('dblclick', function (event) {
+    if (event.target.closest('[data-note-close]')) return;
+    state.notePos = null;
+    saveNotePosition(null);
+    applyNotePosition();
+  });
+  window.addEventListener('resize', function () {
+    if (state.notePos) applyNotePosition();
+  });
   window.addEventListener('hashchange', render);
 
   render();

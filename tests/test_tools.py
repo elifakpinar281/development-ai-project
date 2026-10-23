@@ -1,9 +1,10 @@
-"""Unit test for email inspection tools and pipeline fallback."""
+"""Unit tests for the email inspection tools and the offline fallback of the app."""
 
 from pathlib import Path
 from src.capabilities.tools import (analyze_links, check_email_authentication, inspect_attachments)
 from src.email_parser import parse_email
-from src.pipeline import run_offline_fallback
+from src.services.service_factory import build_components
+from tests.fakes import ScriptedModelClient
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CASES_DIR = PROJECT_ROOT / "evaluation" / "cases"
@@ -56,11 +57,13 @@ def test_tool_headerless_raw_text():
     assert link_res.details["shorteners"] >=1
 
 def test_offline_fallback_verdict():
-    """Offline fallback should produce valid Verdict objects."""
+    """The offline fallback that the app really uses should produce a valid Verdict."""
 
     email_data = parse_email(CASES_DIR / "31-attachment-double-ext.eml")
-    verdict = run_offline_fallback(email_data)
+    components = build_components(model_client=ScriptedModelClient([]), start_domain_server=False)
+    verdict = components.fallback.analyze(email_data).verdict
     assert verdict.is_fallback is True
     assert verdict.verdict == "phishing"
     assert verdict.risk_score >= 65.0
-    assert len(verdict.tools_run) == 3
+    assert "inspect_attachments" in verdict.tools_run
+    assert "scan_prompt_injection" in verdict.tools_run

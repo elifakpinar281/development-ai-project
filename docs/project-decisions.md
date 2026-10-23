@@ -34,11 +34,11 @@ We use `qwen2.5:3b`, running locally through Ollama. The model is set through th
 
 **Why we chose this:**
 - **Privacy:** Emails can contain personal and confidential data. Running the model locally keeps the email and its analysis on the user's machine instead of sending it to a third-party API.
-- **Waiting time:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes, because the agent needs several model calls. A user who wants to know whether to click a link will not wait that long. `qwen2.5:3b` needs about 60 seconds for the same analysis.
+- **Waiting time:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes (median 161 to 172 seconds in our evaluation runs), because the agent needs several model calls. A user who wants to know whether to click a link will not wait that long. `qwen2.5:3b` needs about 1 to 2 minutes for the same analysis (median 72 to 115 seconds, depending on the run).
 - **The application does the safety work:** The facts come from deterministic tools, every decision is validated, every evidence item must be grounded and the safety rules cannot be overridden. The model mainly chooses checks, reads the language of the email and explains the result, so a small model is sufficient. The larger model still judges difficult emails better, so the choice is a trade-off between speed and accuracy (see Evaluation below).
 - **Structured output:** Our agent loop needs reliable JSON decisions and a schema-conformant final report. Qwen2.5 and Qwen3 both support structured output in Ollama.
 - **Configurability:** Because the model is set via environment variables, we can compare `qwen2.5:3b` and `qwen3:8b` without changing the application.
-- **Evaluation:** We ran our test emails with both models and the same code. `qwen3:8b` passed 9 of 10 without a false alarm, `qwen2.5:3b` 6 of 10, but the 8B model was about 1.5 to 2 times slower. A later repetition with three runs per email and an empty case history confirmed this: `qwen3:8b` judged all ten emails correctly, while `qwen2.5:3b` gave a wrong verdict in 5 of 29 runs. The 3B model stays the default for laptops without a graphics card, and `qwen3:8b` is recommended when the hardware allows it.
+- **Evaluation:** We ran our 10 test emails with both models and the same code. In Run E (one run per email), `qwen3:8b` passed all grading rules for 9 of 10 emails without a false alarm, `qwen2.5:3b` for 6 of 10, but the 8B model was about 1.5 to 2 times slower. Run G repeated this with three runs per email for `qwen2.5:3b`, one run for `qwen3:8b` and an empty case history, and confirmed it: `qwen3:8b` gave the right verdict for all ten emails (9 of 10 passed every grading rule), while `qwen2.5:3b` gave a wrong verdict in 5 of 29 runs. The 3B model stays the default for laptops without a graphics card, and `qwen3:8b` is recommended when the hardware allows it.
 
 Trade-off: a small model can produce invalid actions or miss subtle manipulation more often than a larger one. We limit this with schema validation, a step limit, grounding checks and the offline fallback (see Decisions 10 to 13).
 
@@ -450,7 +450,7 @@ All tests run with pytest and need neither Ollama, the network nor the database:
   - `check_email_authentication`: Pass/fail states for SPF, DKIM, and DMARC; Reply-To and Return-Path domain mismatches; display name spoofing against European brands on free webmail.
   - `analyze_links`: Flagging anchor text discrepancies, URL shorteners, and raw IP URLs.
   - `inspect_attachments`: Identifying double extensions (`.pdf.exe`), executable binaries, macros, and archives.
-  - `run_offline_fallback`: Verifying mathematical risk aggregation and valid `Verdict` generation.
+  - Offline fallback: the fallback that the app really uses (`OfflineAnalyzer`, built by the service factory) produces a valid, labelled `Verdict` for a dangerous attachment. The aggregation rules of the fallback are tested in `tests/test_offline_analyzer.py`.
 
 ### Hand-crafted cases
 

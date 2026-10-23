@@ -410,7 +410,7 @@ Four runs ended in the offline fallback (case 26 in all three configurations and
 ### Email parsing, local checks, and pipeline fallback (Riana)
 
 **Setup:** Evaluated using both configurations:
-1. **Offline fallback baseline:** Pure deterministic evaluation using `run_offline_fallback` and Person 1's 3 in-process tools (`check_email_authentication`, `analyze_links`, `inspect_attachments`) with 0 model calls.
+1. **Offline fallback baseline:** Pure deterministic evaluation using an early fallback function (`run_offline_fallback`) with the 3 in-process tools (`check_email_authentication`, `analyze_links`, `inspect_attachments`) and 0 model calls. This function was later replaced by the `OfflineAnalyzer` of the application, which additionally runs the prompt injection, payment fraud and lookalike scans, and it was removed from the code.
 2. **AI Agent with model:** Evaluated using `python -m scripts.try_agent --no-domain-server` with `qwen3.5:4b` running locally on Ollama (temperature 0, step budget 6).
 
 #### Results: Offline Fallback vs. AI Agent Comparison

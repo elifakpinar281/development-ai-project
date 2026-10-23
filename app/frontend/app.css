@@ -253,7 +253,12 @@ footer, .gradio-container footer, .toast-wrap, .loading-wrap { display: none !im
   transition: opacity .25s ease, transform .3s cubic-bezier(.2, .8, .2, 1), visibility 0s;
   pointer-events: auto;
 }
+.note.open { cursor: grab; touch-action: none; user-select: none; }
+.note.dragging { cursor: grabbing; transition: none; }
+.note.dragged, .note-slot .note.dragged { position: fixed; right: auto; bottom: auto; }
+.note-slot:has(.note.dragged) { min-height: 0; }
 .note-close {
+  cursor: pointer;
   position: absolute; top: 36px; right: 26px;
   border: 0; background: transparent; font-size: 20px; line-height: 1; color: #333; padding: 2px 5px;
   border-radius: 4px; z-index: 2;

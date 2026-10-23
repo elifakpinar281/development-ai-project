@@ -5,10 +5,11 @@ This document explains how SpotThePhish is built. It describes the layers of the
 
 ## 1. System Overview & Extended Architecture
 
-SpotThePhish extends the course starter template with three integrated AI capabilities:
+SpotThePhish extends the course starter template with four integrated AI capabilities:
 1. **Agentic Workflow:** The model decides which check to run next, based on the observations so far.
 2. **Tool Integration:** Read-only security checks deliver facts about the email, such as authentication results, link targets and domain age.
-3. **Memory / Persistent State:** A case history in PostgreSQL stores a small fingerprint of every validated verdict, so that repeated phishing campaigns can be recognised.
+3. **Model Context Protocol (MCP):** The four domain and history checks, which depend on external systems (RDAP, Google Safe Browsing, PostgreSQL), run in a separate MCP server. The application discovers them with `list_tools()` and calls them through an MCP client.
+4. **Memory / Persistent State:** A case history in PostgreSQL stores a small fingerprint of every validated verdict, so that repeated phishing campaigns can be recognised.
 
 The model never acts on its own. It only proposes the next step. The application decides whether that step is allowed, runs it and checks the final answer before the user sees it.
 

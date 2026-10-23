@@ -1,5 +1,5 @@
 ollama
-gradio
+gradio>=6.30,<7
 pydantic
 python-dotenv
 pytest
