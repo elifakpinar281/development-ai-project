@@ -12,7 +12,7 @@ def _env_bool(name: str, default: str) -> bool:
 @dataclass
 class Config:
     ollama_base_url: str = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    model_name: str = os.getenv("MODEL_NAME", "qwen3:8b")
+    model_name: str = os.getenv("MODEL_NAME", "qwen2.5:3b")
 
     model_timeout: float = float(os.getenv("MODEL_TIMEOUT", "300"))
 
