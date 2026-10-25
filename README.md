@@ -3,6 +3,7 @@
 Group project for the Development of AI Applications course (Autumn 2026).
 
 SpotThePhish is a local AI assistant that checks a single email for phishing. It explains its verdict with evidence that the application has verified, so the user can see why an email is dangerous instead of getting a bare yes or no.
+The presentation video can be found in [Presentation](#presentation-video)
 
 ## Quick start
 
@@ -419,4 +420,4 @@ Each case records the expected behaviour, grading rules, the actual result and a
 
 ## Presentation video
 
-The link will be added before the final submission (22 October 2026).
+[Presentation video](https://drive.google.com/file/d/1kxK0pcPsiiiWzeWz4V4R8jyqXa_QSDup/view)
