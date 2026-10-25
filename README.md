@@ -3,7 +3,7 @@
 Group project for the Development of AI Applications course (Autumn 2026).
 
 SpotThePhish is a local AI assistant that checks a single email for phishing. It explains its verdict with evidence that the application has verified, so the user can see why an email is dangerous instead of getting a bare yes or no.
-The presentation video can be found in [Presentation](#presentation-video)
+**Presentation video:** [group presentation](https://drive.google.com/file/d/1kxK0pcPsiiiWzeWz4V4R8jyqXa_QSDup/view)
 
 ## Quick start
 
@@ -122,7 +122,7 @@ The application code controls which tools exist, validates every tool call, limi
 2. **Validation and parsing:** The service layer (`src/services/ai_service.py`) rejects empty or oversized input before any model call. The email parser then extracts sender, reply-to, return-path, authentication results, subject, body text, links and attachment metadata. Text pasted without headers is analysed as a message body, with a warning that the sender cannot be verified.
 3. **Automatic scans:** Before the model sees the email, three deterministic scans run. The lookalike check compares the sender and link domains with well-known domains. The prompt injection scan looks for instructions aimed at AI tools, also in hidden HTML. The payment fraud scan looks for requests for gift cards, money, bank details or codes combined with urgency or secrecy, which technical checks cannot see when a real account was hacked. Their results are always observations 1 to 3.
 4. **Investigation loop:** The model (called through the model client and Ollama) receives the parsed email as untrusted data and selects the next check from the allowed tools. The application validates the request, executes the tool and adds the result as a numbered observation. This repeats until the model finishes or the budget of 6 steps is used up.
-5. **Verdict validation:** The model's final report must match a fixed schema. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
+5. **Verdict validation:** The model's final report must match a fixed schema, which is checked with Pydantic. Every evidence item must cite a check that actually ran or quote the email word for word. Deterministic rules then enforce minimum risk levels, for example a link listed as malicious by the reputation service always results in phishing.
 6. **Result:** The UI shows the verdict, risk score, evidence, explanation, recommendation, warnings and investigation trace. A fingerprint of the validated verdict is stored in the case history.
 
 If the model fails (Ollama not running, model not installed, timeout or output that stays invalid after one correction), the application switches to an offline analysis. It runs every check that needs neither the model nor the network and shows a rule-based result that is clearly labelled as a fallback.
@@ -180,7 +180,7 @@ Application Service (src/services/ai_service.py)
 ## Model
 
 - **Model used:** `qwen2.5:3b`, running locally through Ollama. `qwen3:8b` can be used instead by changing `MODEL_NAME`, without any code change.
-- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes (median 161 to 172 seconds in our evaluation runs), which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 1 to 2 minutes (median 72 to 115 seconds, depending on the run). Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes. The larger model judges difficult emails better, as our evaluation shows, so the choice is a trade-off between speed and accuracy.
+- **Why the 3B model:** We started with `qwen3:8b`. On our laptops without a graphics card, one analysis took around 3 minutes (median 161 to 172 seconds in our evaluation runs), which is too long for a user who wants to know whether to click a link. `qwen2.5:3b` needs about 1 to 2 minutes (median 72 to 140 seconds, depending on the run). Because the application checks every decision, every piece of evidence and every verdict itself, a smaller model has less room to make dangerous mistakes. The larger model judges difficult emails better, as our evaluation shows, so the choice is a trade-off between speed and accuracy.
 - **Selection rationale:**
   - **Privacy:** Emails may contain personal and confidential data. Running the model locally through Ollama keeps the email and its analysis on the user's machine instead of sending them to a third-party LLM API.
   - **Structured output:** The agent loop depends on reliable JSON decisions and a schema-conformant final report. Ollama supports structured output for both Qwen2.5 and Qwen3: every request carries a JSON schema, and the schema even limits the model to the real tool names.
@@ -275,7 +275,7 @@ Make sure Ollama is installed and running locally, then pull the model:
 ollama pull qwen2.5:3b
 ```
 
-To use the larger model, run `ollama pull qwen3:8b` and set `MODEL_NAME=qwen3:8b` in `.env`. It needs about 16 GB RAM and is about three times slower without a graphics card.
+To use the larger model, run `ollama pull qwen3:8b` and set `MODEL_NAME=qwen3:8b` in `.env`. It needs about 16 GB RAM and is about 1.5 to 2 times slower without a graphics card.
 
 ### 5. Start PostgreSQL
 
@@ -378,7 +378,7 @@ A false negative (phishing classified as safe) is the most harmful error, so **r
 
 ### Test cases
 
-There are 43 behaviour-focused test cases with 38 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model) [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks) and [`evaluation/jaiesh_test_cases.json`](evaluation/jaiesh_test_cases.json) (emails j01 to j05, the interface and alarming but legitimate input). They cover three categories:
+There are 43 behaviour-focused test cases with 38 emails in `evaluation/cases`. Each team member documents their own cases: [`evaluation/martina_test_cases.json`](evaluation/martina_test_cases.json) (emails 01 to 18, domain checks and memory), [`evaluation/elif_test_cases.json`](evaluation/elif_test_cases.json) (emails 19 to 28 and two failure cases, agent and model), [`evaluation/riana_test_cases.json`](evaluation/riana_test_cases.json) (emails 29 to 33, email checks) and [`evaluation/jaiesh_test_cases.json`](evaluation/jaiesh_test_cases.json) (emails j01 to j05, the interface and alarming but legitimate input). They cover three categories:
 
 - **Successful cases:** typical phishing types such as lookalike domains, newly registered domains, fake deliveries, dangerous attachments and phishing in Finnish.
 - **Difficult cases:** alarming but legitimate emails (a real password reset, a course email about AI), payment and gift card fraud without technical indicators, emails without headers, very long emails, a repeated campaign, a genuine security alert and a genuine email in Finnish.
@@ -420,4 +420,5 @@ Each case records the expected behaviour, grading rules, the actual result and a
 
 ## Presentation video
 
+The recorded group presentation, in which every team member explains their part and the application is demonstrated: 
 [Presentation video](https://drive.google.com/file/d/1kxK0pcPsiiiWzeWz4V4R8jyqXa_QSDup/view)
